@@ -24,7 +24,7 @@
 ##############################################################################
 from spack import *
 
-class Migrate(AutotoolsPackage):
+class Migrate(Package):
     """Migrate estimates population parameters, effective population sizes
        and migration rates of n populations, using genetic data.  It
        uses a coalescent theory approach taking into account history of
@@ -39,6 +39,11 @@ class Migrate(AutotoolsPackage):
     depends_on('automake', type='build')
     depends_on('libtool', type='build')
     depends_on('m4', type='build')
-    depends_on('mpi')
+    depends_on('openmpi')
 
-    build_targets = ["mpis"]
+    def install(self, spec, prefix):
+        with working_dir(join_path(self.stage.source_path, 'src')):
+            configure("STDCPLUS=-lstdc++")
+            make("mpis")
+            make("install")
+

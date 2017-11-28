@@ -41,7 +41,4 @@ class Migrate(AutotoolsPackage):
     depends_on('m4', type='build')
     depends_on('mpi')
 
-    def install(self, spec, prefix):
-        configure()
-        make('mpis')
-        make('install')
+    build_targets = ["mpis"]

@@ -1,13 +1,13 @@
 ##############################################################################
-# Copyright (c) 2013-2016, Lawrence Livermore National Security, LLC.
+# Copyright (c) 2013-2017, Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory.
 #
 # This file is part of Spack.
 # Created by Todd Gamblin, tgamblin@llnl.gov, All rights reserved.
 # LLNL-CODE-647188
 #
-# For details, see https://github.com/llnl/spack
-# Please also see the LICENSE file for our notice and the LGPL.
+# For details, see https://github.com/spack/spack
+# Please also see the NOTICE and LICENSE files for our notice and the LGPL.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License (as
@@ -64,8 +64,7 @@ class Vtk(CMakePackage):
         qt_ver = spec['qt'].version.up_to(1)
         qt_bin = spec['qt'].prefix.bin
 
-        cmake_args = std_cmake_args[:]
-        cmake_args.extend([
+        cmake_args = [
             '-DBUILD_SHARED_LIBS=ON',
             '-DVTK_RENDERING_BACKEND:STRING={0}'.format(opengl_ver),
             '-DVTK_USE_SYSTEM_HDF5=ON',
@@ -86,7 +85,7 @@ class Vtk(CMakePackage):
             '-DVTK_QT_VERSION:STRING={0}'.format(qt_ver),
             '-DQT_QMAKE_EXECUTABLE:PATH={0}/qmake'.format(qt_bin),
             '-DVTK_Group_Qt:BOOL=ON',
-        ])
+        ]
 
         # NOTE: The following definitions are required in order to allow
         # VTK to build with qt~webkit versions (see the documentation for
@@ -99,7 +98,9 @@ class Vtk(CMakePackage):
             ])
 
         if spec.satisfies('@:6.1.0'):
-            cmake_args.append('-DCMAKE_C_FLAGS=-DGLX_GLXEXT_LEGACY')
-            cmake_args.append('-DCMAKE_CXX_FLAGS=-DGLX_GLXEXT_LEGACY')
+            cmake_args.extend([
+                '-DCMAKE_C_FLAGS=-DGLX_GLXEXT_LEGACY',
+                '-DCMAKE_CXX_FLAGS=-DGLX_GLXEXT_LEGACY'
+            ])
 
         return cmake_args

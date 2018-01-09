@@ -6,8 +6,8 @@
 # Created by Todd Gamblin, tgamblin@llnl.gov, All rights reserved.
 # LLNL-CODE-647188
 #
-# For details, see https://github.com/llnl/spack
-# Please also see the LICENSE file for our notice and the LGPL.
+# For details, see https://github.com/spack/spack
+# Please also see the NOTICE and LICENSE files for our notice and the LGPL.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License (as
@@ -60,6 +60,15 @@ class Libxsmm(Package):
             description='Unoptimized with call-trace (LIBXSMM_TRACE).')
     variant('header-only', default=False,
             description='Produce header-only installation')
+
+    @property
+    def libs(self):
+        result = find_libraries(['libxsmm', 'libxsmmf'], root=self.prefix,
+                                recurse=True)
+        if len(result) == 0:
+            result = find_libraries(['libxsmm', 'libxsmmf'], root=self.prefix,
+                                    shared=False, recurse=True)
+        return result
 
     def patch(self):
         kwargs = {'ignore_absent': False, 'backup': False, 'string': True}

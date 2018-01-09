@@ -207,7 +207,7 @@ class Openmpi(AutotoolsPackage):
 
     depends_on('hwloc')
     depends_on('hwloc +cuda', when='+cuda')
-    depends_on('jdk', when='+java')
+    depends_on('java', when='+java')
     depends_on('rdma-core', when='fabrics=rdma')
     depends_on('sqlite', when='+sqlite3@:1.11')
     depends_on('ucx', when='+ucx')

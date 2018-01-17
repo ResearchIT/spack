@@ -37,3 +37,4 @@ class Motif(AutotoolsPackage):
     depends_on('libxt')
     depends_on('libxft')
     depends_on('xbitmaps')
+    depends_on('flex')

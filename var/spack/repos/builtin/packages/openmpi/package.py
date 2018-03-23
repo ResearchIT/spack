@@ -209,7 +209,7 @@ class Openmpi(AutotoolsPackage):
     provides('mpi@:3.1', when='@2.0.0:')
 
     depends_on('hwloc')
-    
+
     if sys.platform != 'darwin':
         depends_on('numactl') 
 

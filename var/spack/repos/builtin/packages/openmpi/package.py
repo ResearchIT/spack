@@ -208,7 +208,9 @@ class Openmpi(AutotoolsPackage):
     provides('mpi@:3.1', when='@2.0.0:')
 
     depends_on('hwloc')
-    depends_on('numactl') 
+    
+    if sys.platform != 'darwin':
+        depends_on('numactl') 
 
     # ompi@:3.0.0 doesn't support newer hwloc releases:
     # "configure: error: OMPI does not currently support hwloc v2 API"

@@ -229,8 +229,8 @@ class Openmpi(AutotoolsPackage):
     conflicts('fabrics=psm2', when='@:1.8')  # PSM2 support was added in 1.10.0
     conflicts('fabrics=mxm', when='@:1.5.3')  # MXM support was added in 1.5.4
     conflicts('+pmi', when='@:1.5.4')  # PMI support was added in 1.5.5
-    conflicts('schedulers=slurm ~pmi', when='@1.5.4:',
-              msg='+pmi is required for openmpi(>=1.5.5) to work with SLURM.')
+    # conflicts('schedulers=slurm ~pmi', when='@1.5.4:',
+    #           msg='+pmi is required for openmpi(>=1.5.5) to work with SLURM.')
 
     filter_compiler_wrappers('openmpi/*-wrapper-data*', relative_root='share')
     conflicts('fabrics=libfabric', when='@:1.8')  # libfabric support was added in 1.10.0 

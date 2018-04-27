@@ -34,9 +34,11 @@ class Gamess(Package):
     homepage = "http://www.msg.ameslab.gov/gamess"
 
     version('development', '7bee8588b399f265976228cde8f75515', url="file://%s/gamess.tar.gz" % os.getcwd())
+    version('devel-2', 'db8ecf6e376f38a411dc2899d956dc48',  url="file://%s/gamess-development.tar.gz" % os.getcwd())
 
     depends_on('atlas')
-    depends_on('mpi')
+    depends_on('mpi', type=('build', 'run'))
+    depends_on('tcsh', type='build')
 
 #   parallel = False
 
@@ -46,6 +48,14 @@ class Gamess(Package):
         #
         atlas = spec['atlas'].libs
         mpi = spec['mpi'].libs
+
+        #change all hardcoded csh to env, using spack provided csh
+        filter_file(r'#!/bin/csh',
+                    '#!/usr/bin/env csh', 'ddi/compddi')
+        filter_file(r'#!/bin/csh',
+                    '#!/usr/bin/env csh', 'comp')
+
+
 
         # We start in $GMS_DIR
 

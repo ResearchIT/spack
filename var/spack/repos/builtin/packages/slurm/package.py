@@ -44,6 +44,7 @@ class Slurm(AutotoolsPackage):
     url = 'https://github.com/SchedMD/slurm/archive/slurm-17-02-6-1.tar.gz'
 
     version('17-02-6-1', '8edbb9ad41819464350d9de013367020')
+    version('17-11-6-1',     '61cb591571809216f2c5e1ddd52f9a8c')
 
     variant('gtk', default=False, description='Enable GTK+ support')
     variant('mariadb', default=False, description='Use MariaDB instead of MySQL')

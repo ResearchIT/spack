@@ -79,4 +79,5 @@ class Trinity(MakefilePackage):
 
     def setup_environment(self, spack_env, run_env):
         run_env.set('TRINITY_HOME', self.prefix.bin)
+        run_env.prepend_path('PATH', self.prefix.bin.util)
         spack_env.append_flags('CXXFLAGS', self.compiler.openmp_flag)

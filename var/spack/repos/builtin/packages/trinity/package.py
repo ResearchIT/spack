@@ -52,8 +52,36 @@ class Trinity(MakefilePackage):
     depends_on("autoconf")
     depends_on("automake")
     depends_on("libtool")
+
+    # There is no documented list of these deps, but they're in the Dockerfile
+    #  and we have runtime errors without them
+    # https://github.com/trinityrnaseq/trinityrnaseq/blob/master/Docker/Dockerfile
+    depends_on("bowtie", type="run")
+    depends_on("r", type="run")
+    depends_on("r-tidyverse", type="run")
+    depends_on("r-edger", type="run")
+    depends_on("r-deseq2", type="run")
+    depends_on("r-ape", type="run")
+    depends_on("r-gplots", type="run")
+    depends_on("r-biobase", type="run")
+    depends_on("r-qvalue", type="run")
+    depends_on("rsem", type="run")
+    depends_on("kallisto", type="run")
+    depends_on("fastqc", type="run")
     depends_on("samtools", type="run")
     depends_on("py-numpy", type="run")
+    depends_on("express", type="run")
+    depends_on("perl-dbfile", type="run")
+    depends_on("perl-uri-escape", type="run")
+    # These don't exist in spack yet
+    # depends_on("r-fastcluster", type="run")
+    # depends_on("r-ctc", type="run"
+    # depends_on("r-goseq", type="run")
+    # depends_on("r-glimma" type="run")
+    # depends_on("r-rots", type="run")
+    # depends_on("r-goplot", type="run")
+    # depends_on("r-argparse", type="run")
+    # depends_on("r-sm", type="run")
 
     def build(self, spec, prefix):
         make()

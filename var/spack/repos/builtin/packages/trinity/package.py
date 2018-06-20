@@ -52,6 +52,7 @@ class Trinity(MakefilePackage):
     depends_on("autoconf")
     depends_on("automake")
     depends_on("libtool")
+    depends_on("samtools", type="run")
 
     def build(self, spec, prefix):
         make()

@@ -56,6 +56,7 @@ class Trinity(MakefilePackage):
     # There is no documented list of these deps, but they're in the Dockerfile
     #  and we have runtime errors without them
     # https://github.com/trinityrnaseq/trinityrnaseq/blob/master/Docker/Dockerfile
+    depends_on("blast-plus", type="run")
     depends_on("bowtie", type="run")
     depends_on("r", type="run")
     depends_on("r-tidyverse", type="run")

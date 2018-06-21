@@ -32,6 +32,7 @@ class PySip(Package):
     homepage = "http://www.riverbankcomputing.com/software/sip/intro"
     url      = "http://sourceforge.net/projects/pyqt/files/sip/sip-4.16.5/sip-4.16.5.tar.gz"
 
+    version('4.19.8', '0625fb20347d4ff1b5da551539be0727', url='https://sourceforge.net/projects/pyqt/files/sip/sip-4.19.8/sip-4.19.8.tar.gz')
     version('4.16.5', '6d01ea966a53e4c7ae5c5e48c40e49e5')
     version('4.16.7', '32abc003980599d33ffd789734de4c36')
 
@@ -45,3 +46,7 @@ class PySip(Package):
                '--sipdir=%s' % os.path.join(spec.prefix.share, 'sip'))
         make()
         make('install')
+
+    def setup_dependent_environment(self, spack_env, run_env, dependent_spec):
+        spack_env.prepend_path('CPATH', join_path(self.prefix.include, 'python2.7'))
+        run_env.prepend_path('CPATH', join_path(self.prefix.include, 'python2.7'))

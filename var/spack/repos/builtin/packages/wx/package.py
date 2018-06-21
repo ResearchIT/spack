@@ -47,7 +47,7 @@ class Wx(AutotoolsPackage):
     patch('math_include.patch', when='@3.0.1:3.0.2')
 
     depends_on('pkgconfig', type='build')
-    depends_on('gtkplus')
+    depends_on('gtkplus3')
 
     @when('@:3.0.2')
     def build(self, spec, prefix):

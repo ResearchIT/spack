@@ -1,5 +1,5 @@
 ##############################################################################
-# Copyright (c) 2013-2016, Lawrence Livermore National Security, LLC.
+# Copyright (c) 2013-2018, Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory.
 #
 # This file is part of Spack.
@@ -27,7 +27,7 @@ import os
 import llnl.util.tty as tty
 from llnl.util.filesystem import mkdirp, working_dir
 
-import spack
+import spack.paths
 from spack.util.executable import ProcessError, which
 
 _SPACK_UPSTREAM = 'https://github.com/spack/spack'
@@ -47,7 +47,7 @@ def setup_parser(subparser):
 
 
 def get_origin_info(remote):
-    git_dir = os.path.join(spack.prefix, '.git')
+    git_dir = os.path.join(spack.paths.prefix, '.git')
     git = which('git', required=True)
     try:
         branch = git('symbolic-ref', '--short', 'HEAD', output=str)

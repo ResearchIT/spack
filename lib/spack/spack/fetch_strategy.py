@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2013-2017, Lawrence Livermore National Security, LLC.
+# Copyright (c) 2013-2018, Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory.
 #
 # This file is part of Spack.
@@ -49,9 +49,9 @@ from functools import wraps
 from six import string_types, with_metaclass
 
 import llnl.util.tty as tty
-from llnl.util.filesystem import working_dir, mkdirp, join_path
+from llnl.util.filesystem import working_dir, mkdirp
 
-import spack
+import spack.config
 import spack.error
 import spack.util.crypto as crypto
 import spack.util.pattern as pattern
@@ -141,6 +141,14 @@ class FetchStrategy(with_metaclass(FSMeta, object)):
             bool: True if can cache, False otherwise.
         """
 
+    def source_id(self):
+        """A unique ID for the source.
+
+        The returned value is added to the content which determines the full
+        hash for a package using `str()`.
+        """
+        raise NotImplementedError
+
     def __str__(self):  # Should be human readable URL.
         return "FetchStrategy.__str___"
 
@@ -159,6 +167,11 @@ class FetchStrategyComposite(object):
     """
     matches = FetchStrategy.matches
     set_stage = FetchStrategy.set_stage
+
+    def source_id(self):
+        component_ids = tuple(i.source_id() for i in self)
+        if all(component_ids):
+            return component_ids
 
 
 class URLFetchStrategy(FetchStrategy):
@@ -197,6 +210,9 @@ class URLFetchStrategy(FetchStrategy):
             self._curl = which('curl', required=True)
         return self._curl
 
+    def source_id(self):
+        return self.digest
+
     @_needs_stage
     def fetch(self):
         if self.archive_file:
@@ -227,7 +243,7 @@ class URLFetchStrategy(FetchStrategy):
             self.url,
         ]
 
-        if spack.insecure:
+        if not spack.config.get('config:verify_ssl'):
             curl_args.append('-k')
 
         if sys.stdout.isatty():
@@ -276,7 +292,8 @@ class URLFetchStrategy(FetchStrategy):
         # Check if we somehow got an HTML file rather than the archive we
         # asked for.  We only look at the last content type, to handle
         # redirects properly.
-        content_types = re.findall(r'Content-Type:[^\r\n]+', headers)
+        content_types = re.findall(r'Content-Type:[^\r\n]+', headers,
+                                   flags=re.IGNORECASE)
         if content_types and 'text/html' in content_types[-1]:
             tty.warn("The contents of ",
                      (self.archive_file if self.archive_file is not None
@@ -592,7 +609,7 @@ class GitFetchStrategy(VCSFetchStrategy):
 
             # If the user asked for insecure fetching, make that work
             # with git as well.
-            if spack.insecure:
+            if not spack.config.get('config:verify_ssl'):
                 self._git.add_default_env('GIT_SSL_NO_VERIFY', 'true')
 
         return self._git
@@ -600,6 +617,16 @@ class GitFetchStrategy(VCSFetchStrategy):
     @property
     def cachable(self):
         return bool(self.commit or self.tag)
+
+    def source_id(self):
+        return self.commit or self.tag
+
+    def get_source_id(self):
+        if not self.branch:
+            return
+        output = self.git('ls-remote', self.url, self.branch, output=str)
+        if output:
+            return output.split()[0]
 
     def fetch(self):
         if self.stage.source_path:
@@ -621,13 +648,13 @@ class GitFetchStrategy(VCSFetchStrategy):
             # Need to do a regular clone and check out everything if
             # they asked for a particular commit.
             with working_dir(self.stage.path):
-                if spack.debug:
+                if spack.config.get('config:debug'):
                     git('clone', self.url)
                 else:
                     git('clone', '--quiet', self.url)
 
             with working_dir(self.stage.source_path):
-                if spack.debug:
+                if spack.config.get('config:debug'):
                     git('checkout', self.commit)
                 else:
                     git('checkout', '--quiet', self.commit)
@@ -635,7 +662,7 @@ class GitFetchStrategy(VCSFetchStrategy):
         else:
             # Can be more efficient if not checking out a specific commit.
             args = ['clone']
-            if not spack.debug:
+            if not spack.config.get('config:debug'):
                 args.append('--quiet')
 
             # If we want a particular branch ask for it.
@@ -673,7 +700,7 @@ class GitFetchStrategy(VCSFetchStrategy):
                         # pull --tags returns a "special" error code of 1 in
                         # older versions that we have to ignore.
                         # see: https://github.com/git/git/commit/19d122b
-                        if spack.debug:
+                        if spack.config.get('config:debug'):
                             git('pull', '--tags', ignore_errors=1)
                             git('checkout', self.tag)
                         else:
@@ -683,7 +710,7 @@ class GitFetchStrategy(VCSFetchStrategy):
         with working_dir(self.stage.source_path):
             # Init submodules if the user asked for them.
             if self.submodules:
-                if spack.debug:
+                if spack.config.get('config:debug'):
                     git('submodule', 'update', '--init', '--recursive')
                 else:
                     git('submodule', '--quiet', 'update', '--init',
@@ -695,7 +722,7 @@ class GitFetchStrategy(VCSFetchStrategy):
     @_needs_stage
     def reset(self):
         with working_dir(self.stage.source_path):
-            if spack.debug:
+            if spack.config.get('config:debug'):
                 self.git('checkout', '.')
                 self.git('clean', '-f')
             else:
@@ -742,6 +769,18 @@ class SvnFetchStrategy(VCSFetchStrategy):
     @property
     def cachable(self):
         return bool(self.revision)
+
+    def source_id(self):
+        return self.revision
+
+    def get_source_id(self):
+        output = self.svn('info', self.url, output=str)
+        if not output:
+            return None
+        lines = output.split('\n')
+        for line in lines:
+            if line.startswith('Revision:'):
+                return line.split()[-1]
 
     @_needs_stage
     def fetch(self):
@@ -838,6 +877,14 @@ class HgFetchStrategy(VCSFetchStrategy):
     def cachable(self):
         return bool(self.revision)
 
+    def source_id(self):
+        return self.revision
+
+    def get_source_id(self):
+        output = self.hg('id', self.url, output=str)
+        if output:
+            return output.strip()
+
     @_needs_stage
     def fetch(self):
         if self.stage.source_path:
@@ -851,7 +898,7 @@ class HgFetchStrategy(VCSFetchStrategy):
 
         args = ['clone']
 
-        if spack.insecure:
+        if not spack.config.get('config:verify_ssl'):
             args.append('--insecure')
 
         args.append(self.url)
@@ -914,7 +961,7 @@ def from_kwargs(**kwargs):
     # Raise an error in case we can't instantiate any known strategy
     message = "Cannot instantiate any FetchStrategy"
     long_message = message + " from the given arguments : {arguments}".format(
-        srguments=kwargs)
+        arguments=kwargs)
     raise FetchError(message, long_message)
 
 
@@ -988,12 +1035,12 @@ class FsCache(object):
         if isinstance(fetcher, CacheURLFetchStrategy):
             return
 
-        dst = join_path(self.root, relativeDst)
+        dst = os.path.join(self.root, relativeDst)
         mkdirp(os.path.dirname(dst))
         fetcher.archive(dst)
 
     def fetcher(self, targetPath, digest, **kwargs):
-        path = join_path(self.root, targetPath)
+        path = os.path.join(self.root, targetPath)
         return CacheURLFetchStrategy(path, digest, **kwargs)
 
     def destroy(self):

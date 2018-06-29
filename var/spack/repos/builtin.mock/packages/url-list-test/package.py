@@ -1,5 +1,5 @@
 ##############################################################################
-# Copyright (c) 2013-2017, Lawrence Livermore National Security, LLC.
+# Copyright (c) 2013-2018, Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory.
 #
 # This file is part of Spack.
@@ -25,14 +25,14 @@
 from spack import *
 
 import os
-import spack
+import spack.paths
 
 
 class UrlListTest(Package):
     """Mock package with url_list."""
     homepage = "http://www.url-list-example.com"
 
-    web_data_path = os.path.join(spack.test_path, 'data', 'web')
+    web_data_path = os.path.join(spack.paths.test_path, 'data', 'web')
     url = 'file://' + web_data_path + '/foo-0.0.0.tar.gz'
     list_url = 'file://' + web_data_path + '/index.html'
     list_depth = 3

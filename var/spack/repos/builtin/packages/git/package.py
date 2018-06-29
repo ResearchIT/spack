@@ -1,5 +1,5 @@
 ##############################################################################
-# Copyright (c) 2013-2017, Lawrence Livermore National Security, LLC.
+# Copyright (c) 2013-2018, Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory.
 #
 # This file is part of Spack.
@@ -43,6 +43,21 @@ class Git(AutotoolsPackage):
     #       https://www.kernel.org/pub/software/scm/git/git-manpages-{version}.tar.xz
 
     releases = [
+        {
+            'version': '2.17.1',
+            'md5': 'e04bfbbe5f17a4faa9507c75b8505c13',
+            'md5_manpages': 'f1d5dfc1459c9f2885f790c5af7473d1'
+        },
+        {
+            'version': '2.17.0',
+            'md5': '8e0f5253eef3abeb76bd9c55386d3bee',
+            'md5_manpages': '1ce1ae78a559032810af8b455535935f'
+        },
+        {
+            'version': '2.15.1',
+            'md5': 'da59fc6baa55ab44684011e369af397d',
+            'md5_manpages': '2cb428071c08c7df513cfc103610536e',
+        },
         {
             'version': '2.14.1',
             'md5': 'e965a37b3d277f2e7e78f5b04de28e2a',
@@ -136,7 +151,7 @@ class Git(AutotoolsPackage):
     ]
 
     for release in releases:
-        version(release['version'], release['md5'])
+        version(release['version'], md5=release['md5'])
         resource(
             name='git-manpages',
             url="https://www.kernel.org/pub/software/scm/git/git-manpages-{0}.tar.xz".format(
@@ -144,6 +159,9 @@ class Git(AutotoolsPackage):
             md5=release['md5_manpages'],
             placement='git-manpages',
             when='@{0}'.format(release['version']))
+
+    variant('tcltk', default=False,
+            description='Gitk: provide Tcl/Tk in the run environment')
 
     depends_on('curl')
     depends_on('expat')
@@ -159,19 +177,36 @@ class Git(AutotoolsPackage):
     depends_on('automake', type='build')
     depends_on('libtool',  type='build')
     depends_on('m4',       type='build')
+    depends_on('tk',       type=('build', 'link'), when='+tcltk')
+
+    # See the comment in setup_environment re EXTLIBS.
+    def patch(self):
+        filter_file(r'^EXTLIBS =$',
+                    '#EXTLIBS =',
+                    'Makefile')
 
     def setup_environment(self, spack_env, run_env):
-        # This is done to avoid failures when git is an external package.
+        # We use EXTLIBS rather than LDFLAGS so that git's Makefile
+        # inserts the information into the proper place in the link commands
+        # (alongside the # other libraries/paths that configure discovers).
+        # LDFLAGS is inserted *before* libgit.a, which requires libintl.
+        # EXTFLAGS is inserted *after* libgit.a.
+        # This depends on the patch method above, which keeps the Makefile
+        # from stepping on the value that we pass in via the environment.
+        #
+        # The test avoids failures when git is an external package.
         # In that case the node in the DAG gets truncated and git DOES NOT
         # have a gettext dependency.
         if 'gettext' in self.spec:
-            spack_env.append_flags('LDFLAGS', '-L{0} -lintl'.format(
+            spack_env.append_flags('EXTLIBS', '-L{0} -lintl'.format(
                 self.spec['gettext'].prefix.lib))
+            spack_env.append_flags('CFLAGS', '-I{0}'.format(
+                self.spec['gettext'].prefix.include))
 
     def configure_args(self):
         spec = self.spec
 
-        return [
+        configure_args = [
             '--with-curl={0}'.format(spec['curl'].prefix),
             '--with-expat={0}'.format(spec['expat'].prefix),
             '--with-iconv={0}'.format(spec['libiconv'].prefix),
@@ -181,11 +216,22 @@ class Git(AutotoolsPackage):
             '--with-zlib={0}'.format(spec['zlib'].prefix),
         ]
 
+        if '+tcltk' in self.spec:
+            configure_args.append('--with-tcltk={0}'.format(
+                self.spec['tk'].prefix.bin.wish))
+        else:
+            configure_args.append('--without-tcltk')
+
+        return configure_args
+
     @run_after('configure')
     def filter_rt(self):
         if sys.platform == 'darwin':
             # Don't link with -lrt; the system has no (and needs no) librt
             filter_file(r' -lrt$', '', 'Makefile')
+
+    def check(self):
+        make('test')
 
     @run_after('install')
     def install_completions(self):

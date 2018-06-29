@@ -1,5 +1,5 @@
 ##############################################################################
-# Copyright (c) 2013-2017, Lawrence Livermore National Security, LLC.
+# Copyright (c) 2013-2018, Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory.
 #
 # This file is part of Spack.
@@ -59,7 +59,7 @@ class Esmf(MakefilePackage):
     depends_on('xerces-c@3.1.0:', when='+xerces')
 
     # Testing dependencies
-    # depends_on('perl', type='test')  # TODO: Add a test deptype
+    depends_on('perl', type='test')
 
     # Make esmf build with newer gcc versions
     # https://sourceforge.net/p/esmf/esmf/ci/3706bf758012daebadef83d6575c477aeff9c89b/
@@ -68,6 +68,10 @@ class Esmf(MakefilePackage):
     # Fix undefined reference errors with mvapich2
     # https://sourceforge.net/p/esmf/esmf/ci/34de0ccf556ba75d35c9687dae5d9f666a1b2a18/
     patch('mvapich2.patch', when='@:7.0.99')
+
+    # Allow different directories for creation and
+    # installation of dynamic libraries on OSX:
+    patch('darwin_dylib_install_name.patch', when='platform=darwin')
 
     # Make script from mvapich2.patch executable
     @run_before('build')
@@ -104,7 +108,7 @@ class Esmf(MakefilePackage):
         # bin/binO/Linux.gfortran.64.default.default
         os.environ['ESMF_INSTALL_BINDIR'] = 'bin'
         os.environ['ESMF_INSTALL_LIBDIR'] = 'lib'
-        os.environ['ESMF_INSTALL_MODDIR'] = 'mod'
+        os.environ['ESMF_INSTALL_MODDIR'] = 'include'
 
         ############
         # Compiler #
@@ -149,11 +153,17 @@ class Esmf(MakefilePackage):
         # ESMF_COMM must be set to indicate which MPI implementation
         # is used to build the ESMF library.
         if '+mpi' in spec:
-            if '^mvapich2' in spec:
+            if 'platform=cray' in self.spec:
+                os.environ['ESMF_COMM'] = 'mpi'
+            elif '^mvapich2' in spec:
                 os.environ['ESMF_COMM'] = 'mvapich2'
             elif '^mpich' in spec:
-                # FIXME: mpich or mpich2?
+                # esmf@7.0.1 does not include configs for mpich3,
+                # so we start with the configs for mpich2:
                 os.environ['ESMF_COMM'] = 'mpich2'
+                # The mpich 3 series split apart the Fortran and C bindings,
+                # so we link the Fortran libraries when building C programs:
+                os.environ['ESMF_CXXLINKLIBS'] = '-lmpifort'
             elif '^openmpi' in spec:
                 os.environ['ESMF_COMM'] = 'openmpi'
             elif '^intel-parallel-studio+mpi' in spec:

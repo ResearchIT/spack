@@ -1,5 +1,5 @@
 ##############################################################################
-# Copyright (c) 2013-2017, Lawrence Livermore National Security, LLC.
+# Copyright (c) 2013-2018, Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory.
 #
 # This file is part of Spack.
@@ -32,12 +32,13 @@ class Astyle(MakefilePackage):
     """
 
     homepage = "http://astyle.sourceforge.net/"
-    # homepage is dead use Gentoo Mirror
-    # url = "http://downloads.sourceforge.net/project/astyle/astyle/astyle%202.04/astyle_2.04_linux.tar.gz"
-    url = "http://distfiles.gentoo.org/distfiles/astyle_3.0.1_linux.tar.gz"
+    url = "https://sourceforge.net/projects/astyle/files/astyle/astyle%203.0.1/astyle_3.0.1_linux.tar.gz"
+    # Gentoo alternative
+    # url = "http://distfiles.gentoo.org/distfiles/astyle_3.0.1_linux.tar.gz"
 
     maintainers = ['davydden']
 
+    version('3.1',    '7712622f62661b1d8cb1062d7fedc390')
     version('3.0.1',  'c301f09679efa2e1eb6e6b5fd33788b4')
     version('2.06',   'ff588e7fcede824591cf5b9085df109d')
     version('2.05.1', '4142d178047d7040da3e0e2f1b030a1a')

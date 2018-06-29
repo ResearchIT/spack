@@ -1,5 +1,5 @@
 ##############################################################################
-# Copyright (c) 2013-2017, Lawrence Livermore National Security, LLC.
+# Copyright (c) 2013-2018, Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory.
 #
 # This file is part of Spack.
@@ -33,6 +33,7 @@ class Fastqc(Package):
     homepage = "http://www.bioinformatics.babraham.ac.uk/projects/fastqc/"
     url = "http://www.bioinformatics.babraham.ac.uk/projects/fastqc/fastqc_v0.11.5.zip"
 
+    version('0.11.7', '8fead05fa62c5e723f0d2157a9b5fcd4')
     version('0.11.5', '3524f101c0ab0bae77c7595983170a76')
     version('0.11.4', '104ff2e0e9aebf5bee1f6b068a059b0d')
 

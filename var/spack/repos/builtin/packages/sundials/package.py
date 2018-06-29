@@ -1,5 +1,5 @@
 ##############################################################################
-# Copyright (c) 2013-2017, Lawrence Livermore National Security, LLC.
+# Copyright (c) 2013-2018, Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory.
 #
 # This file is part of Spack.
@@ -39,6 +39,8 @@ class Sundials(CMakePackage):
     # Versions
     # ==========================================================================
 
+    version('4.0.0-dev', '1d4b538721b84ebc91ce7ad92d94beae')
+    version('3.1.1', 'e63f4de0be5be97f750b30b0fa11ef34', preferred=True)
     version('3.1.0', '1a84ca41c7f71067e03d519ddbcd9dae')
     version('3.0.0', '5163a44cedd7398bddda442ba00313b8')
     version('2.7.0', 'c304631b9bc82877d7b0e9f4d4fd94d3')
@@ -164,6 +166,7 @@ class Sundials(CMakePackage):
 
     # Build dependencies
     depends_on('cmake@2.8.1:', type='build')
+    depends_on('cmake@3.0.2:', type='build', when='@4.0.0:')
 
     # MPI related dependencies
     depends_on('mpi', when='+mpi')
@@ -216,9 +219,9 @@ class Sundials(CMakePackage):
 
         fortran_flag = self.compiler.pic_flag
         if spec.satisfies('%clang platform=darwin'):
-            mpif77 = Executable(self.spec['mpi'].mpif77)
-            libgfortran = LibraryList(mpif77('--print-file-name',
-                                             'libgfortran.a', output=str))
+            f77 = Executable(self.compiler.f77)
+            libgfortran = LibraryList(f77('--print-file-name',
+                                          'libgfortran.a', output=str))
             fortran_flag += ' ' + libgfortran.ld_flags
 
         # List of CMake arguments
@@ -476,3 +479,37 @@ class Sundials(CMakePackage):
         for filename in f90_files:
             filter_file(os.environ['FC'], self.compiler.fc,
                         os.path.join(dirname, filename), **kwargs)
+
+    @property
+    def headers(self):
+        """Export the headers and defines of SUNDIALS.
+           Sample usage: spec['sundials'].headers.cpp_flags
+        """
+        # SUNDIALS headers are inside subdirectories, so we use a fake header
+        # in the include directory.
+        hdr = find(self.prefix.include.nvector, 'nvector_serial.h',
+                   recursive=False)
+        return HeaderList(join_path(self.spec.prefix.include, 'fake.h')) \
+            if hdr else None
+
+    @property
+    def libs(self):
+        """Export the libraries of SUNDIALS.
+           Sample usage: spec['sundials'].libs.ld_flags
+                         spec['sundials:arkode,cvode'].libs.ld_flags
+        """
+        query_parameters = self.spec.last_query.extra_parameters
+        if not query_parameters:
+            sun_libs = 'libsundials_*[!0-9]'
+            # Q: should the result be ordered by dependency?
+        else:
+            sun_libs = ['libsundials_' + p for p in query_parameters]
+        search_paths = [[self.prefix.lib, False], [self.prefix.lib64, False],
+                        [self.prefix, True]]
+        is_shared = '+shared' in self.spec
+        for path, recursive in search_paths:
+            libs = find_libraries(sun_libs, root=path, shared=is_shared,
+                                  recursive=recursive)
+            if libs:
+                return libs
+        return None  # Raise an error

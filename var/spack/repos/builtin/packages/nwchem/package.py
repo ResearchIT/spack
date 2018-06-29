@@ -1,5 +1,5 @@
 ##############################################################################
-# Copyright (c) 2013-2017, Lawrence Livermore National Security, LLC.
+# Copyright (c) 2013-2018, Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory.
 #
 # This file is part of Spack.
@@ -33,6 +33,10 @@ class Nwchem(Package):
     homepage = "http://www.nwchem-sw.org"
     url      = "http://www.nwchem-sw.org/images/Nwchem-6.6.revision27746-src.2015-10-20.tar.gz"
 
+    tags = ['ecp', 'ecp-apps']
+
+    version('6.8', '50b18116319f4c15d1cb7eaa1b433006',
+            url='https://github.com/nwchemgit/nwchem/archive/v6.8-release.tar.gz')
     version('6.6', 'c581001c004ea5e5dfacb783385825e3',
             url='http://www.nwchem-sw.org/images/Nwchem-6.6.revision27746-src.2015-10-20.tar.gz')
 
@@ -70,9 +74,9 @@ class Nwchem(Package):
         ]
     }
     # Iterate over patches
-    for condition, urls in urls_for_patches.items():
-        for url, sha256, archive_sha256 in urls:
-            patch(url, when=condition, level=0, sha256=sha256, archive_sha256=archive_sha256)
+    for __condition, __urls in urls_for_patches.items():
+        for __url, __sha256, __archive_sha256 in __urls:
+            patch(__url, when=__condition, level=0, sha256=__sha256, archive_sha256=__archive_sha256)
 
     def install(self, spec, prefix):
         scalapack = spec['scalapack'].libs

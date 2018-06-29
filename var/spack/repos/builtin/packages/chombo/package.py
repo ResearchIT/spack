@@ -1,5 +1,5 @@
 ##############################################################################
-# Copyright (c) 2013-2017, Lawrence Livermore National Security, LLC.
+# Copyright (c) 2013-2018, Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory.
 #
 # This file is part of Spack.
@@ -35,6 +35,8 @@ class Chombo(MakefilePackage):
 
     homepage = "https://commons.lbl.gov/display/chombo"
     url      = "http://bitbucket.org/drhansj/chombo-xsdk.git"
+
+    tags = ['ecp', 'ecp-apps']
 
     # Use whatever path Brian V. and Terry L. agreed upon, but preserve version
     version('3.2', git='http://bitbucket.org/drhansj/chombo-xsdk.git', commit='71d856c')

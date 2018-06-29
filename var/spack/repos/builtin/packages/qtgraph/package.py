@@ -1,5 +1,5 @@
 ##############################################################################
-# Copyright (c) 2013-2017, Lawrence Livermore National Security, LLC.
+# Copyright (c) 2013-2018, Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory.
 #
 # This file is part of Spack.
@@ -49,14 +49,20 @@ class Qtgraph(QMakePackage):
        libgvc within the Qt Graphics View Framework."""
 
     homepage = "https://github.com/OpenSpeedShop/QtGraph"
-
     url      = "https://github.com/OpenSpeedShop/QtGraph.git"
-    version('1.0.0', branch='master',
+
+    version('1.0.0.0', branch='1.0.0.0',
+            git='https://github.com/OpenSpeedShop/QtGraph.git')
+
+    version('develop', branch='master',
             git='https://github.com/OpenSpeedShop/QtGraph.git')
 
     # qtgraph depends on these packages
-    depends_on('qt@4.8.6:')
-    depends_on('graphviz')
+    depends_on('qt@4.8.6:', when='@develop')
+    depends_on('qt@5.10.0', when='@1.0.0.0:')
+
+    depends_on("graphviz@2.40.1:", when='@develop')
+    depends_on("graphviz@2.40.1", when='@1.0.0.0:')
 
     def setup_environment(self, spack_env, run_env):
         """Set up the compile and runtime environments for a package."""

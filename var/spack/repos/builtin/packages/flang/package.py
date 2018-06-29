@@ -30,9 +30,10 @@ import os
 class Flang(CMakePackage):
     """Flang is a Fortran compiler targeting LLVM."""
     homepage = "https://github.com/flang-compiler/flang"
-    url      = "https://github.com/flang-compiler/flang/flecsi/tarball/v1.0"
+    url      = "https://github.com/flang-compiler/flang/archive/flang_20180319.tar.gz"
 
     version('develop', git='https://github.com/flang-compiler/flang', branch='master')
+    version('20180319', 'e659bad83b791f90af2c5cd672864669')
 
     depends_on(
             "llvm+clang@4.0.1,5.0.0",
@@ -80,3 +81,8 @@ class Flang(CMakePackage):
             out.close()
         chmod = which('chmod')
         chmod('+x', flang)
+
+    def setup_environment(self, spack_env, run_env):
+        run_env.set('FC', join_path(self.spec.prefix.bin, 'flang'))
+        run_env.set('F77', join_path(self.spec.prefix.bin, 'flang'))
+        run_env.set('F90', join_path(self.spec.prefix.bin, 'flang'))

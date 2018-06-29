@@ -1,5 +1,5 @@
 ##############################################################################
-# Copyright (c) 2013-2017, Lawrence Livermore National Security, LLC.
+# Copyright (c) 2013-2018, Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory.
 #
 # This file is part of Spack.
@@ -26,14 +26,14 @@ import collections
 import errno
 import hashlib
 import fileinput
-import fnmatch
 import glob
+import grp
 import numbers
 import os
+import pwd
 import re
 import shutil
 import stat
-import subprocess
 import sys
 import tempfile
 from contextlib import contextmanager
@@ -41,6 +41,7 @@ from contextlib import contextmanager
 import six
 from llnl.util import tty
 from llnl.util.lang import dedupe
+from spack.util.executable import Executable
 
 __all__ = [
     'FileFilter',
@@ -76,6 +77,18 @@ __all__ = [
     'unset_executable_mode',
     'working_dir'
 ]
+
+
+def path_contains_subdirectory(path, root):
+    norm_root = os.path.abspath(root).rstrip(os.path.sep) + os.path.sep
+    norm_path = os.path.abspath(path).rstrip(os.path.sep) + os.path.sep
+    return norm_path.startswith(norm_root)
+
+
+def same_path(path1, path2):
+    norm1 = os.path.abspath(path1).rstrip(os.path.sep)
+    norm2 = os.path.abspath(path2).rstrip(os.path.sep)
+    return norm1 == norm2
 
 
 def filter_file(regex, repl, *filenames, **kwargs):
@@ -119,9 +132,15 @@ def filter_file(regex, repl, *filenames, **kwargs):
         regex = re.escape(regex)
 
     for filename in filenames:
+
+        msg = 'FILTER FILE: {0} [replacing "{1}"]'
+        tty.debug(msg.format(filename, regex))
+
         backup_filename = filename + "~"
 
         if ignore_absent and not os.path.exists(filename):
+            msg = 'FILTER FILE: file "{0}" not found. Skipping to next file.'
+            tty.debug(msg.format(filename))
             continue
 
         # Create backup file. Don't overwrite an existing backup
@@ -196,15 +215,30 @@ def change_sed_delimiter(old_delim, new_delim, *filenames):
 
 def set_install_permissions(path):
     """Set appropriate permissions on the installed file."""
-# If this points to a file maintained in a Spack prefix, it is assumed that
-# this function will be invoked on the target. If the file is outside a
-# Spack-maintained prefix, the permissions should not be modified.
+    # If this points to a file maintained in a Spack prefix, it is assumed that
+    # this function will be invoked on the target. If the file is outside a
+    # Spack-maintained prefix, the permissions should not be modified.
     if os.path.islink(path):
         return
     if os.path.isdir(path):
         os.chmod(path, 0o755)
     else:
         os.chmod(path, 0o644)
+
+
+def group_ids(uid=None):
+    """Get group ids that a uid is a member of.
+
+    Arguments:
+        uid (int): id of user, or None for current user
+
+    Returns:
+        (list of int): gids of groups the user is a member of
+    """
+    if uid is None:
+        uid = os.getuid()
+    user = pwd.getpwuid(uid).pw_name
+    return [g.gr_gid for g in grp.getgrall() if user in g.gr_mem]
 
 
 def copy_mode(src, dest):
@@ -257,6 +291,17 @@ def install_tree(src, dest, **kwargs):
 def is_exe(path):
     """True if path is an executable file."""
     return os.path.isfile(path) and os.access(path, os.X_OK)
+
+
+def get_filetype(path_name):
+    """
+    Return the output of file path_name as a string to identify file type.
+    """
+    file = Executable('file')
+    file.add_default_env('LC_ALL', 'C')
+    output = file('-b', '-h', '%s' % path_name,
+                  output=str, error=str)
+    return output.strip()
 
 
 def mkdirp(*paths):
@@ -578,12 +623,10 @@ def fix_darwin_install_name(path):
     libs = glob.glob(join_path(path, "*.dylib"))
     for lib in libs:
         # fix install name first:
-        subprocess.Popen(
-            ["install_name_tool", "-id", lib, lib],
-            stdout=subprocess.PIPE).communicate()[0]
-        long_deps = subprocess.Popen(
-            ["otool", "-L", lib],
-            stdout=subprocess.PIPE).communicate()[0].split('\n')
+        install_name_tool = Executable('install_name_tool')
+        install_name_tool('-id', lib, lib)
+        otool = Executable('otool')
+        long_deps = otool('-L', lib, output=str).split('\n')
         deps = [dep.partition(' ')[0][1::] for dep in long_deps[2:-1]]
         # fix all dependencies:
         for dep in deps:
@@ -594,13 +637,11 @@ def fix_darwin_install_name(path):
                 # but we don't know builddir (nor how symbolic links look
                 # in builddir). We thus only compare the basenames.
                 if os.path.basename(dep) == os.path.basename(loc):
-                    subprocess.Popen(
-                        ["install_name_tool", "-change", dep, loc, lib],
-                        stdout=subprocess.PIPE).communicate()[0]
+                    install_name_tool('-change', dep, loc, lib)
                     break
 
 
-def find(root, files, recurse=True):
+def find(root, files, recursive=True):
     """Search for ``files`` starting from the ``root`` directory.
 
     Like GNU/BSD find but written entirely in Python.
@@ -621,7 +662,7 @@ def find(root, files, recurse=True):
 
     is equivalent to:
 
-    >>> find('/usr/local/bin', 'python', recurse=False)
+    >>> find('/usr/local/bin', 'python', recursive=False)
 
     Accepts any glob characters accepted by fnmatch:
 
@@ -646,7 +687,7 @@ def find(root, files, recurse=True):
     if isinstance(files, six.string_types):
         files = [files]
 
-    if recurse:
+    if recursive:
         return _find_recursive(root, files)
     else:
         return _find_non_recursive(root, files)
@@ -660,11 +701,14 @@ def _find_recursive(root, search_files):
     # found in a key, and reconstructing the stable order later.
     found_files = collections.defaultdict(list)
 
+    # Make the path absolute to have os.walk also return an absolute path
+    root = os.path.abspath(root)
+
     for path, _, list_files in os.walk(root):
         for search_file in search_files:
-            for list_file in list_files:
-                if fnmatch.fnmatch(list_file, search_file):
-                    found_files[search_file].append(join_path(path, list_file))
+            matches = glob.glob(os.path.join(path, search_file))
+            matches = [os.path.join(path, x) for x in matches]
+            found_files[search_file].extend(matches)
 
     answer = []
     for search_file in search_files:
@@ -678,10 +722,13 @@ def _find_non_recursive(root, search_files):
     # can return files in any order (does not preserve stability)
     found_files = collections.defaultdict(list)
 
-    for list_file in os.listdir(root):
-        for search_file in search_files:
-            if fnmatch.fnmatch(list_file, search_file):
-                found_files[search_file].append(join_path(root, list_file))
+    # Make the path absolute to have absolute path returned
+    root = os.path.abspath(root)
+
+    for search_file in search_files:
+        matches = glob.glob(os.path.join(root, search_file))
+        matches = [os.path.join(root, x) for x in matches]
+        found_files[search_file].extend(matches)
 
     answer = []
     for search_file in search_files:
@@ -872,7 +919,7 @@ class HeaderList(FileList):
         self._macro_definitions.append(macro)
 
 
-def find_headers(headers, root, recurse=False):
+def find_headers(headers, root, recursive=False):
     """Returns an iterable object containing a list of full paths to
     headers if found.
 
@@ -890,7 +937,7 @@ def find_headers(headers, root, recurse=False):
     Parameters:
         headers (str or list of str): Header name(s) to search for
         root (str): The root directory to start searching from
-        recurses (bool, optional): if False search only root folder,
+        recursive (bool, optional): if False search only root folder,
             if True descends top-down from the root. Defaults to False.
 
     Returns:
@@ -910,7 +957,7 @@ def find_headers(headers, root, recurse=False):
     # List of headers we are searching with suffixes
     headers = ['{0}.{1}'.format(header, suffix) for header in headers]
 
-    return HeaderList(find(root, headers, recurse))
+    return HeaderList(find(root, headers, recursive))
 
 
 class LibraryList(FileList):
@@ -1051,7 +1098,7 @@ def find_system_libraries(libraries, shared=True):
 
     for library in libraries:
         for root in search_locations:
-            result = find_libraries(library, root, shared, recurse=True)
+            result = find_libraries(library, root, shared, recursive=True)
             if result:
                 libraries_found += result
                 break
@@ -1059,7 +1106,7 @@ def find_system_libraries(libraries, shared=True):
     return libraries_found
 
 
-def find_libraries(libraries, root, shared=True, recurse=False):
+def find_libraries(libraries, root, shared=True, recursive=False):
     """Returns an iterable of full paths to libraries found in a root dir.
 
     Accepts any glob characters accepted by fnmatch:
@@ -1078,7 +1125,7 @@ def find_libraries(libraries, root, shared=True, recurse=False):
         root (str): The root directory to start searching from
         shared (bool, optional): if True searches for shared libraries,
             otherwise for static. Defaults to True.
-        recurse (bool, optional): if False search only root folder,
+        recursive (bool, optional): if False search only root folder,
             if True descends top-down from the root. Defaults to False.
 
     Returns:
@@ -1100,4 +1147,4 @@ def find_libraries(libraries, root, shared=True, recurse=False):
     # List of libraries we are searching with suffixes
     libraries = ['{0}.{1}'.format(lib, suffix) for lib in libraries]
 
-    return LibraryList(find(root, libraries, recurse))
+    return LibraryList(find(root, libraries, recursive))

@@ -1,5 +1,5 @@
 ##############################################################################
-# Copyright (c) 2013-2017, Lawrence Livermore National Security, LLC.
+# Copyright (c) 2013-2018, Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory.
 #
 # This file is part of Spack.
@@ -62,8 +62,7 @@ class Wget(AutotoolsPackage):
     depends_on('perl@5.12.0:', type='build')
     depends_on('pkgconfig', type='build')
 
-    # TODO: Add a 'test' deptype
-    # depends_on('valgrind', type='test')
+    depends_on('valgrind', type='test')
 
     build_directory = 'spack-build'
 

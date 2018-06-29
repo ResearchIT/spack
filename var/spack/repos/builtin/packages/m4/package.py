@@ -1,5 +1,5 @@
 ##############################################################################
-# Copyright (c) 2013-2017, Lawrence Livermore National Security, LLC.
+# Copyright (c) 2013-2018, Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory.
 #
 # This file is part of Spack.
@@ -36,6 +36,9 @@ class M4(AutotoolsPackage):
 
     patch('gnulib-pgi.patch', when='@1.4.18')
     patch('pgi.patch', when='@1.4.17')
+    # from: https://github.com/Homebrew/homebrew-core/blob/master/Formula/m4.rb
+    # Patch credit to Jeremy Huddleston Sequoia <jeremyhu@apple.com>
+    patch('secure_snprintf.patch', when='platform_os = highsierra')
 
     variant('sigsegv', default=True,
             description="Build the libsigsegv dependency")

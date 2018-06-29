@@ -1,5 +1,5 @@
 ##############################################################################
-# Copyright (c) 2013-2017, Lawrence Livermore National Security, LLC.
+# Copyright (c) 2013-2018, Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory.
 #
 # This file is part of Spack.
@@ -61,7 +61,7 @@ class Amrex(CMakePackage):
         spec = self.spec
 
         cmake_args = [
-            '-DENABLE_POSITION_INDEPENDENT_CODE=ON',
+            '-DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON',
             '-DBL_SPACEDIM:INT=%d' % int(spec.variants['dims'].value),
             '-DBL_PRECISION:STRING=%s' % spec.variants['prec'].value,
             '-DENABLE_FMG=%s' % ('+fortran' in spec),

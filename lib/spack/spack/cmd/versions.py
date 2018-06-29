@@ -1,5 +1,5 @@
 ##############################################################################
-# Copyright (c) 2013-2017, Lawrence Livermore National Security, LLC.
+# Copyright (c) 2013-2018, Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory.
 #
 # This file is part of Spack.
@@ -26,7 +26,8 @@ from __future__ import print_function
 
 from llnl.util.tty.colify import colify
 import llnl.util.tty as tty
-import spack
+
+import spack.repo
 
 description = "list available versions of a package"
 section = "packaging"

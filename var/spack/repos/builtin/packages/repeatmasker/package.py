@@ -1,5 +1,5 @@
 ##############################################################################
-# Copyright (c) 2013-2016, Lawrence Livermore National Security, LLC.
+# Copyright (c) 2013-2018, Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory.
 #
 # This file is part of Spack.
@@ -37,6 +37,7 @@ class Repeatmasker(Package):
     version('4.0.7', '4dcbd7c88c5343e02d819f4b3e6527c6')
 
     depends_on('perl', type=('build', 'run'))
+    depends_on('perl-text-soundex', type=('build', 'run'))
     depends_on('hmmer')
     depends_on('ncbi-rmblastn')
     depends_on('trf')
@@ -63,7 +64,7 @@ class Repeatmasker(Package):
         #    Repeatmasker? (Y/N)
         # Add a Search Engine: Done
 
-        config_answers = ['\n', '%s\n' % self.spec['perl'].prefix.bin.perl,
+        config_answers = ['\n', '%s\n' % self.spec['perl'].command.path,
                           '%s\n' % self.stage.source_path,
                           '%s\n' % self.spec['trf'].prefix.bin.trf, '2\n',
                           '%s\n' % self.spec['ncbi-rmblastn'].prefix.bin,
@@ -77,4 +78,4 @@ class Repeatmasker(Package):
         with open(config_answers_filename, 'r') as f:
             inspect.getmodule(self).perl('configure', input=f)
 
-        distutils.dir_util.copy_tree(".", prefix)
+        distutils.dir_util.copy_tree(".", prefix.bin)

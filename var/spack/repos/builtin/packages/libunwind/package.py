@@ -1,5 +1,5 @@
 ##############################################################################
-# Copyright (c) 2013-2017, Lawrence Livermore National Security, LLC.
+# Copyright (c) 2013-2018, Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory.
 #
 # This file is part of Spack.
@@ -31,4 +31,5 @@ class Libunwind(AutotoolsPackage):
     homepage = "http://www.nongnu.org/libunwind/"
     url      = "http://download.savannah.gnu.org/releases/libunwind/libunwind-1.1.tar.gz"
 
+    version('1.2.1', '06ba9e60d92fd6f55cd9dadb084df19e')
     version('1.1', 'fb4ea2f6fbbe45bf032cd36e586883ce')

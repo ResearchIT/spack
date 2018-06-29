@@ -1,5 +1,5 @@
 ##############################################################################
-# Copyright (c) 2013-2017, Lawrence Livermore National Security, LLC.
+# Copyright (c) 2013-2018, Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory.
 #
 # This file is part of Spack.
@@ -35,6 +35,7 @@ class Mitofates(Package):
     version('1.2', 'aaac42a8e8c7318a4abde9df3a4b72d1')
 
     depends_on('libsvm')
+    depends_on('perl', type='run')
 
     def install(self, spec, prefix):
         install_tree('bin', prefix.bin)

@@ -1,5 +1,5 @@
 ##############################################################################
-# Copyright (c) 2013-2017, Lawrence Livermore National Security, LLC.
+# Copyright (c) 2013-2018, Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory.
 #
 # This file is part of Spack.
@@ -84,8 +84,10 @@ class Gettext(AutotoolsPackage):
             config_args.append('--disable-curses')
 
         if '+libxml2' in spec:
-            config_args.append('--with-libxml2-prefix={0}'.format(
+            config_args.append('CPPFLAGS=-I{0}/include'.format(
                 spec['libxml2'].prefix))
+            config_args.append('LDFLAGS=-L{0} -Wl,-rpath,{0}'.format(
+                spec['libxml2'].libs.directories[0]))
         else:
             config_args.append('--with-included-libxml')
 

@@ -36,6 +36,12 @@ class Mitofates(Package):
 
     depends_on('libsvm')
     depends_on('perl', type='run')
+    depends_on('perl-inline-c', type='run')
+    depends_on('perl-perl6-slurp', type='run')
+    depends_on('perl-math-cephes', type='run')
+
+    def edit(self, spec, prefix):
+        #all the .pl and .pm files need /usr/bin/perl replaced with /usr/bin/env perl
 
     def install(self, spec, prefix):
         install_tree('bin', prefix.bin)

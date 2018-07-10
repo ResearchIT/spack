@@ -42,6 +42,9 @@ class Mitofates(Package):
 
     def edit(self, spec, prefix):
         #all the .pl and .pm files need /usr/bin/perl replaced with /usr/bin/env perl
+        with working_dir(self.build_directory):
+            perlscripts = FileFilter('*.pl')
+            perlscripts.filter('#!/usr/bin/perl', '#!/usr/bin/env perl')
 
     def install(self, spec, prefix):
         install_tree('bin', prefix.bin)

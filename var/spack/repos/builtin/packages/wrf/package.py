@@ -38,9 +38,31 @@ class Wrf(AutotoolsPackage):
 
     depends_on('mpi')
     depends_on('netcdf')
+    depends_on('netcdf-fortran')
     depends_on('jasper')
     depends_on('libpng')
     depends_on('zlib')
+    depends_on('perl')
+
+    depends_on('autoconf', type='build')
+    depends_on('automake', type='build')
+    depends_on('m4', type='build')
+    depends_on('libtool', type='build')
+
+    def setup_environment(self, spack_env, run_env):
+        spack_env.set('NETCDF', self.spec['netcdf-fortran'].prefix)
+
+
+    def configure(self, spec, prefix):
+        install_answer = ['35\n', '3\n']
+        install_answer_input = 'spack-config.in'
+        with open(install_answer_input, 'w') as f:
+            f.writelines(install_answer)
+        with open(install_answer_input, 'r') as f:
+            bash = which('bash')
+            bash('./configure', input=f)
+            install_tree(".", prefix)
+
 
     def build(self, spec, prefix):
         sh = which('sh')

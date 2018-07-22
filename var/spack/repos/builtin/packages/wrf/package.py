@@ -52,6 +52,11 @@ class Wrf(AutotoolsPackage):
     def setup_environment(self, spack_env, run_env):
         spack_env.set('NETCDF', self.spec['netcdf-fortran'].prefix)
 
+    def patch(self):
+        # Make configure scripts use Spack's tcsh
+        files = glob.glob('*')
+
+        filter_file('^#!/bin/csh -f', '#!/usr/bin/env csh', files)
 
     def configure(self, spec, prefix):
         install_answer = ['35\n', '3\n']
@@ -61,7 +66,6 @@ class Wrf(AutotoolsPackage):
         with open(install_answer_input, 'r') as f:
             bash = which('bash')
             bash('./configure', input=f)
-            install_tree(".", prefix)
 
 
     def build(self, spec, prefix):

@@ -23,7 +23,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 ##############################################################################
 from spack import *
-
+import glob
 
 class Wrf(AutotoolsPackage):
     """The Weather Research and Forecasting (WRF) Model
@@ -54,9 +54,10 @@ class Wrf(AutotoolsPackage):
 
     def patch(self):
         # Make configure scripts use Spack's tcsh
-        files = glob.glob('*')
+        files = glob.glob('*.csh')
 
-        filter_file('^#!/bin/csh -f', '#!/usr/bin/env csh', files)
+        filter_file('^#!/bin/csh -f', '#!/usr/bin/env csh', *files)
+        filter_file('^#!/bin/csh', '#!/usr/bin/env csh', *files)
 
     def configure(self, spec, prefix):
         install_answer = ['35\n', '3\n']

@@ -44,14 +44,14 @@ class Trinity(MakefilePackage):
 
     version('2.6.6', 'b7472e98ab36655a6d9296d965471a56')
 
-    depends_on("java@8:")
+    depends_on("java@8:", type=("build", "run"))
     depends_on("bowtie2")
     depends_on("jellyfish")
     depends_on("salmon")
-    depends_on("perl+threads")
-    depends_on("autoconf")
-    depends_on("automake")
-    depends_on("libtool")
+    depends_on("perl+threads", type=("build", "run"))
+    depends_on("autoconf", type="build")
+    depends_on("automake", type="build")
+    depends_on("libtool", type="build")
 
     # There is no documented list of these deps, but they're in the Dockerfile
     #  and we have runtime errors without them
@@ -74,15 +74,14 @@ class Trinity(MakefilePackage):
     depends_on("express", type="run")
     depends_on("perl-dbfile", type="run")
     depends_on("perl-uri-escape", type="run")
-    # These don't exist in spack yet
-    # depends_on("r-fastcluster", type="run")
-    # depends_on("r-ctc", type="run"
-    # depends_on("r-goseq", type="run")
-    # depends_on("r-glimma" type="run")
-    # depends_on("r-rots", type="run")
-    # depends_on("r-goplot", type="run")
-    # depends_on("r-argparse", type="run")
-    # depends_on("r-sm", type="run")
+    depends_on("r-fastcluster", type="run")
+    depends_on("r-ctc", type="run")
+    depends_on("r-goseq", type="run")
+    depends_on("r-glimma", type="run")
+    depends_on("r-rots", type="run")
+    depends_on("r-goplot", type="run")
+    depends_on("r-argparse", type="run")
+    depends_on("r-sm", type="run")
 
     def build(self, spec, prefix):
         make()

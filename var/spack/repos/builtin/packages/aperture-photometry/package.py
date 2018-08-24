@@ -31,16 +31,15 @@
 #
 # You can edit this file again by typing:
 #
-#     spack edit aperture-photometry
 #
 # See the Spack documentation for more information on packaging.
 # If you submit this package back to Spack as a pull request,
 # please first remove this boilerplate and all FIXME comments.
-#
 from spack import *
+import glob
+import os.path
+import re
 
-    # FIXME: Add proper versions and checksums here.
-    # version('1.2.3', '0123456789abcdef0123456789abcdef')
 
 class AperturePhotometry(Package):
     """Aperture Photometry Tool APT is software for astronomical research"""
@@ -54,4 +53,26 @@ class AperturePhotometry(Package):
 
     def install(self, spec, prefix):
         mkdirp(prefix.bin)
-        install('bin/AperturePhotometry, prefix.bin')
+        # The list of files to install varies with release...
+        # ... but skip the spack-{build.env}.out files and gatkdoc directory.
+        files = [x for x in glob.glob("*")
+                 if not re.match("^spack-", x) and not re.match("^aperturedoc", x)]
+        for f in files:
+            install(f, prefix.bin)
+
+        # Set up a helper script to call java on the jar file,
+        # explicitly codes the path for java and the jar file.
+        script_sh = join_path(os.path.dirname(__file__), "APT.csh")
+        script = join_path(prefix.bin, "aperture")
+        install(script_csh, script)
+        set_executable(script)
+
+        # Munge the helper script to explicitly point to java and the
+        # jar file.
+        java = join_path(self.spec['java'].prefix, 'bin', 'java')
+        kwargs = {'ignore_absent': False, 'backup': False, 'string': False}
+        filter_file('^java', java, script, **kwargs)
+        filter_file('APT.jar', join_path(prefix.bin,
+                    'APT.jar'),
+                    script, **kwargs)
+

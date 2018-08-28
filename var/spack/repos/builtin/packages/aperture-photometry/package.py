@@ -39,7 +39,7 @@ from spack import *
 import glob
 import os.path
 import re
-
+import os
 
 class AperturePhotometry(Package):
     """Aperture Photometry Tool APT is software for astronomical research"""
@@ -47,7 +47,7 @@ class AperturePhotometry(Package):
     homepage = "http://www.aperturephotometry.org/aptool/"
     url      = "http://www.aperturephotometry.org/aptool/wp-content/plugins/download-monitor/download.php?id=1"
 
-    version('2.7.2', '2beca6aac14c5e0a94d115f81edf0caa9ec83dc9d32893ea00ee376c9360deb0', expand=False)
+    version('2.7.2', '2beca6aac14c5e0a94d115f81edf0caa9ec83dc9d32893ea00ee376c9360deb0', extension='tar.gz')
 
     depends_on('java')
 
@@ -55,24 +55,5 @@ class AperturePhotometry(Package):
         mkdirp(prefix.bin)
         # The list of files to install varies with release...
         # ... but skip the spack-{build.env}.out files and gatkdoc directory.
-        files = [x for x in glob.glob("*")
-                 if not re.match("^spack-", x) and not re.match("^aperturedoc", x)]
-        for f in files:
-            install(f, prefix.bin)
-
-        # Set up a helper script to call java on the jar file,
-        # explicitly codes the path for java and the jar file.
-        script_sh = join_path(os.path.dirname(__file__), "APT.csh")
-        script = join_path(prefix.bin, "aperture")
-        install(script_csh, script)
-        set_executable(script)
-
-        # Munge the helper script to explicitly point to java and the
-        # jar file.
-        java = join_path(self.spec['java'].prefix, 'bin', 'java')
-        kwargs = {'ignore_absent': False, 'backup': False, 'string': False}
-        filter_file('^java', java, script, **kwargs)
-        filter_file('APT.jar', join_path(prefix.bin,
-                    'APT.jar'),
-                    script, **kwargs)
-
+        jar_file = 'APT.jar'
+        install(jar_file, prefix.bin)

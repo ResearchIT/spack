@@ -48,5 +48,5 @@ class PyPymysql(PythonPackage):
 
     version('0.9.2', sha256='9ec760cbb251c158c19d6c88c17ca00a8632bac713890e465b2be01fdc30713f')
 
-    depends_on('mysql@5.5:')
-    depends_on('py-cython@2.7:,3.4:')
+    depends_on('py-setuptools')
+    depends_on('py-cryptography')

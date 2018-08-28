@@ -36,10 +36,7 @@
 # If you submit this package back to Spack as a pull request,
 # please first remove this boilerplate and all FIXME comments.
 from spack import *
-import glob
 import os.path
-import re
-import os
 
 class AperturePhotometry(Package):
     """Aperture Photometry Tool APT is software for astronomical research"""
@@ -53,7 +50,14 @@ class AperturePhotometry(Package):
 
     def install(self, spec, prefix):
         mkdirp(prefix.bin)
-        # The list of files to install varies with release...
-        # ... but skip the spack-{build.env}.out files and gatkdoc directory.
         jar_file = 'APT.jar'
         install(jar_file, prefix.bin)
+        java = join_path(self.spec['java'].prefix, 'bin', 'java')
+        script_sh = join_path(os.path.dirname(__file__), "APT.sh")
+        script = join_path(prefix.bin, "apt")
+        install(script_sh, script)
+        set_executable(script)
+        kwargs = {'ignore_absent': False, 'backup': False, 'string': False}
+        filter_file('^java', java, script, **kwargs)
+        filter_file('APT.jar', join_path(prefix.bin, 'APT.jar'),
+                    script, **kwargs)

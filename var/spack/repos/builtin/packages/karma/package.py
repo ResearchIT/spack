@@ -57,4 +57,3 @@ class Karma(Package):
         'LD_LIBRARY_PATH'= self.spec['lib']
 
     def install(self, spec, prefix):
-        make('install')

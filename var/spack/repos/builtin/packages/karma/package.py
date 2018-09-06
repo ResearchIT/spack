@@ -36,9 +36,9 @@ class Karma(Package):
     depends_on('libx11')
 
     def configure(self):
-        'LD_LIBRARY_PATH'= self.spec['lib']
+        LD_LIBRARY_PATH = self.spec['lib']
 
     def install(self, spec, prefix):
         dst = join_path(prefix, 'Karma')
 
-        install('csh_script/install_karma', dst)
+        install('csh_script/install-karma', dst)

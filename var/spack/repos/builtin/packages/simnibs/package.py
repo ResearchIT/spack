@@ -63,7 +63,7 @@ class Simnibs(PythonPackage):
         # SimNIBS manages python dependencies by setting up miniconda,
         # but we'll avoid that and use our own python
 
-        files = glob.glob('Python_modules/*.py')    
+        files = glob.glob('Python_modules/*.py')
 
         for f in files:
             # ensure that each python start file has a shebang

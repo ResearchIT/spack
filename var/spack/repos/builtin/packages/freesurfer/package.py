@@ -54,7 +54,7 @@ class Freesurfer(Package):
         distutils.dir_util.copy_tree(".", prefix)
 
     # This isn't working right now
-    def setup_enivronment(self, spack_env, run_env):
+    def setup_environment(self, spack_env, run_env):
         run_env.set('FREESURFER_HOME', self.prefix)
         spack_env.set('FREESURFER_HOME', self.prefix)
 

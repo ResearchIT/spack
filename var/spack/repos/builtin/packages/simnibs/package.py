@@ -34,8 +34,11 @@ class Simnibs(PythonPackage):
        of the electric field induced by transcranial magnetic stimulation (TMS)
        and transcranial direct current stimulation (tDCS).
 
-       Downloading SimNIBS requires registering an account so Spack will
-       search the current working directory for the source package. """
+       Note: SimNIBS is licensed software. You will need to create an account
+       on the SimNIBS homepage and download SimNIBS yourself. Spack will
+       search your current directory for the download file. Alternatively, add
+       this file to a mirror so that Spack can find it. For instructions on how
+       to set up a mirror, see http://spack.readthedocs.io/en/latest/mirrors.html"""
 
     homepage = "http://simnibs.de"
     url      = "file://{0}/simnibs-2.1.1-Linux64.tar.gz".format(os.getcwd())
@@ -48,7 +51,8 @@ class Simnibs(PythonPackage):
     depends_on('py-h5py@2.7.1:', type=('build', 'run'))
     depends_on('py-numpy@1.13.3:', type=('build', 'run'))
     depends_on('py-pytest@3.3.2:', type=('build', 'run'))
-    #depends_on('py-pyqt', type=('build', 'run'))
+    depends_on('py-pyqt', type=('build', 'run'))
+    depends_on('py-numpy', type=('run'))
     depends_on('qt@5.6.2:', type=('build', 'run'))
     depends_on('py-scipy@1.0.0:', type=('build', 'run'))
     depends_on('py-babel@2.2.1:', type=('build', 'run'))
@@ -71,6 +75,12 @@ class Simnibs(PythonPackage):
                         f, string=True)
             set_executable(f)
             install(f, prefix.bin)
+
+        # we have to install all of the modules ourself
+        # simnibs setup will link to the stage which gets destroyed
+        install_tree('Python_modules/src',
+                     os.path.join(prefix,
+                                  spec['python'].package.site_packages_dir))
 
     def url_for_version(self, version):
         url = "file://{0}/simnibs-{1}-Linux64.tar.gz"

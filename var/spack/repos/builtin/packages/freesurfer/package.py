@@ -37,12 +37,12 @@ class Freesurfer(Package):
 
     version('6.0.0', 'd49e9dd61d6467f65b9582bddec653a4')
 
-    depends_on('mesa-glu')
-    depends_on('libpng@1.2.57')
-    depends_on('libxscrnsaver')
-    depends_on('libxft')
-    depends_on('tk')
-    depends_on('qt')
+    depends_on('mesa-glu', type='run')
+    depends_on('libpng@1.2.57', type='run')
+    depends_on('libxscrnsaver', type='run')
+    depends_on('libxft', type='run')
+    depends_on('tk', type='run')
+    depends_on('qt', type='run')
 
     # Licensing
     license_required = True
@@ -53,7 +53,6 @@ class Freesurfer(Package):
     def install(self, spec, prefix):
         distutils.dir_util.copy_tree(".", prefix)
 
-    # This isn't working right now
     def setup_environment(self, spack_env, run_env):
         run_env.set('FREESURFER_HOME', self.prefix)
         spack_env.set('FREESURFER_HOME', self.prefix)
@@ -64,5 +63,4 @@ class Freesurfer(Package):
 
         freevars = join_path(self.stage.source_path, 'SetUpFreeSurfer.sh')
         spack_env.extend(EnvironmentModifications.from_sourcing_file(freevars))
-        freerun = join_path(self.prefix, 'SetUpFreeSurfer.sh')
-        run_env.extend(EnvironmentModifications.from_sourcing_file(freerun))
+        run_env.extend(EnvironmentModifications.from_sourcing_file(freevars))

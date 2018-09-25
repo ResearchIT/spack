@@ -25,24 +25,21 @@
 from spack import *
 
 
-class RCallr(RPackage):
-    """It is sometimes useful to perform a computation in a separate R
-       process, without affecting the current R process at all. This packages
-       does exactly that."""
+class RProcessx(RPackage):
+    """Tools to run system processes in the background"""
 
-    homepage = "https://github.com/MangoTheCat/callr"
-    url      = "https://cran.r-project.org/src/contrib/callr_3.0.0.tar.gz"
-    list_url = "https://cran.r-project.org/src/contrib/Archive/callr/callr_2.0.4.tar.gz"
+    homepage = "https://github.com/r-lib/processx"
+    url      = "https://cran.r-project.org/src/contrib/processx_3.2.0.tar.gz"
+    list_url      = "https://cran.r-project.org/src/contrib/Archive/processx/processx_3.1.0.tar.gz"
 
-    version('3.0.0', sha256='e36361086c65660a6ecbbc09b5ecfcddee6b59caf75e983e48b21d3b8defabe7')
-    version('2.0.4', sha256='0e3fa4e047f61f4e29ab2dee8f585861fb77a5f5ad6c81f125e98b6130c6a380')
-    version('2.0.3', sha256='f1f7d511b215eb88d8680edef09d31eb93b3ef8beb124f8edf0c82601f7575cc')
-    version('2.0.2', sha256='778595e3f0b08f4e33a3103bd8e84a183945074f9e7404cdee8d72b7d3b8a154')
-    version('2.0.1', sha256='067bb1cda50a63df626a23128d1e32eb20a2ed3ea6cae0937bef97ce6dc6c3e6')
-    version('2.0.0', sha256='b89482fa11c02058e636a19e9286a30f4e2c299a7b1aa52d87cd839520b2a4bb')
-    version('1.0.0', sha256='2c56808c723aba2ea8a8b6bbdc9b8332c96f59b119079861dd52f5988c27f715')
+    version('3.2.0', sha256='c4ba602fcbdc032ae9d94701b3e6b83a2dab1b53d0b4f9937b07a84eae22fddf')
+    version('3.1.0',   sha256='11ac120ab4e4aa0e99c9b2eda87d07bc683bab735f1761e95e5ddacd311b5972')
+    version('3.0.3',   sha256='53781dba3c538605a02e28b3b577e7de79e2064bfc502025f7ec0e5945e302bf')
+    version('2.0.0.1', sha256='8f61b2952d0f2d13c74465bfba174ce11eee559475c2f7b9be6bcb9e2e1d827b')
+    version('2.0.0',   sha256='8325b56a60a276909228756281523cda9256bc754c5f3ca03b41c5c17cc398ad')
 
-    depends_on('r-base64enc', type=('build', 'run'))
-    depends_on('r-processx', type=('build', 'run'))
+    depends_on('r-assertthat', type=('build', 'run'))
+    depends_on('r-crayon', type=('build', 'run'))
+    depends_on('r-ps', type=('build', 'run'))
     depends_on('r-r6', type=('build', 'run'))
     depends_on('r-utils', type=('build', 'run'))

@@ -25,23 +25,18 @@
 from spack import *
 
 
-class REdger(RPackage):
-    """Differential expression analysis of RNA-seq expression profiles with
-       biological replication. Implements a range of statistical methodology
-       based on the negative binomial distributions, including empirical Bayes
-       estimation, exact tests, generalized linear models and quasi-likelihood
-       tests. As well as RNA-seq, it be applied to differential signal analysis
-       of other types of genomic data that produce counts, including ChIP-seq,
-       SAGE and CAGE."""
+class PerlCgi(PerlPackage):
+    """CGI - Handle Common Gateway Interface requests and responses
 
-    homepage = "https://bioconductor.org/packages/edgeR/"
-    git      = "https://git.bioconductor.org/packages/edgeR.git"
+       CGI was included in the Perl distribution from 5.4 to 5.20 but
+       has since been removed."""
 
-    version('3.22.3', commit='e82e54afc9398ac54dc4caba0f7ae5c43e572203')
-    version('3.18.1', commit='101106f3fdd9e2c45d4a670c88f64c12e97a0495')
+    homepage = "https://metacpan.org/pod/CGI"
+    url      = "https://cpan.metacpan.org/authors/id/L/LE/LEEJO/CGI-4.40.tar.gz"
 
-    depends_on('r-limma', type=('build', 'run'))
-    depends_on('r-locfit', type=('build', 'run'))
-    depends_on('r-rcpp', type=('build', 'run'))
-    depends_on('r@3.5.0:3.5.9', when='@3.22.3')
-    depends_on('r@3.4.0:3.4.9', when='@3.18.1')
+    version('4.40', sha256='10efff3061b3c31a33b3cc59f955aef9c88d57d12dbac46389758cef92f24f56')
+    version('4.39', sha256='7e73417072445f24e03d63802ed3a9e368c9b103ddc96e2a9bcb6a251215fb76')
+    version('4.38', sha256='8c58f4a529bb92a914b22b7e64c5e31185c9854a4070a6dfad44fe5cc248e7d4')
+    version('4.37', sha256='7a14eee5df640f7141848f653cf48d99bfc9b5c68e18167338ee01b91cdfb883')
+
+    depends_on('perl-html-parser', type=('build', 'run'))

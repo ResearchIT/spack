@@ -57,5 +57,6 @@ class RDelayedarray(RPackage):
     depends_on('r-iranges', type=('build', 'run'))
     depends_on('r-iranges@2.11.17:', when='@0.4.1:', type=('build', 'run'))
     depends_on('r-matrixstats', type=('build', 'run'))
+    depends_on('r-biocparallel', type=('build', 'run'))
     depends_on('r@3.4.0:3.4.9', when='@0.2.7', type=('build', 'run'))
     depends_on('r@3.5.0:3.5.9', when='@0.6.5', type=('build', 'run'))

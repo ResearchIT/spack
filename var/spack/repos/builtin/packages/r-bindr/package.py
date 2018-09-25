@@ -33,4 +33,5 @@ class RBindr(RPackage):
     url      = "https://cran.r-project.org/src/contrib/bindr_0.1.tar.gz"
     list_url = "https://cran.r-project.org/src/contrib/Archive/bindr"
 
+    version('0.1.1', sha256='7c785ca77ceb3ab9282148bcecf64d1857d35f5b800531d49483622fe67505d0')
     version('0.1', 'f3897a70cbad2d2981272772fa30bb59')

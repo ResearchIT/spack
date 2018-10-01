@@ -234,6 +234,16 @@ class Gcc(AutotoolsPackage):
                         '-I{0}'.format(spec['zlib'].prefix.include),
                         'gcc/Makefile.in')
 
+        if spec.satisfies('+nvptx'):
+            resource(
+                name='newlib',
+                url='ftp://sourceware.org/pub/newlib/newlib-3.0.0.20180831.tar.gz',
+                destination='newlib-source'
+            )
+
+            symlink('newlib-source/newlib', 'newlib')
+
+
     def configure_args(self):
         spec = self.spec
 
@@ -286,10 +296,10 @@ class Gcc(AutotoolsPackage):
 
         # nvptx-none offloading
         if spec.satisfies('+nvptx'):
-           options.append('--with-build-time-tools={0}'.format(spec['nvptx-tools'].prefix.nvptx-none.bin))
-           options.append('--enable-as-accelerator-for=fillintargetarch')
-           options.append('--disable-sjlj-exceptions')
-           options.append('--enable-newlib-io-long-long')
+            options.append('--with-build-time-tools={0}'.format(spec['nvptx-tools'].prefix.nvptx-none.bin))
+            options.append('--enable-as-accelerator-for=x86_64-pc-linux-gnu')
+            options.append('--disable-sjlj-exceptions')
+            options.append('--enable-newlib-io-long-long')
 
         return options
 

@@ -40,3 +40,4 @@ class Pacvim(MakefilePackage):
         makefile = FileFilter('Makefile')
 
         makefile.filter(r'PREFIX = /usr/local', 'PREFIX={0}'.format(self.prefix))
+

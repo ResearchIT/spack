@@ -27,7 +27,8 @@ from spack import *
 
 
 class Pacvim(MakefilePackage):
-    """Pacvim is a command-line-based game dedicated to helping individuals learn Spack and Linux"""
+    """Pacvim is a command-line-based game dedicated to helping individuals
+    learn the fundamentals of Spack, Linux and Git"""
 
     homepage = "https://github.com/jmoon018/PacVim"
     url      = "https://github.com/jmoon018/PacVim/archive/v1.1.1.tar.gz"

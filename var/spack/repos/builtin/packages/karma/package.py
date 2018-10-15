@@ -35,10 +35,15 @@ class Karma(Package):
 
     depends_on('libx11')
 
-    def configure(self):
-        LD_LIBRARY_PATH = self.spec['lib']
+    phases=[ 'install']
+
+    resource(
+                name='karma',
+                url='ftp://ftp.atnf.csiro.au/pub/software/karma/karma-1.7.25-amd64_Linux_libc6.3.tar.bz2',
+                sha256='effc3ed61c28b966b357147d90357d03c22d743c6af6edb49a863c6eb625a441',
+                destination='./karma-1.7.25'
+               )
 
     def install(self, spec, prefix):
-        dst = join_path(prefix, 'Karma')
-
-        install('csh_script/install-karma', dst)
+        copy_tree('amd64_Linux_libc6.3/bin', prefix.bin)
+        copy_tree('amd64_Linux_libc6.3/lib', prefix.lib)

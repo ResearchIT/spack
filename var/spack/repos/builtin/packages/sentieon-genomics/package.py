@@ -51,4 +51,9 @@ class SentieonGenomics(Package):
     version('201808.01', sha256='6d77bcd5a35539549b28eccae07b19a3b353d027720536e68f46dcf4b980d5f7')
 
     def install(self, spec, prefix):
-        install_tree(sentieon-genomics-201808.01, prefix)
+        install_tree('bin', prefix.bin)
+        install_tree('doc', prefix.doc)
+        install_tree('etc', prefix.etc)
+        install_tree('lib', prefix.lib)
+        install_tree('libexec', prefix.libexec)
+        install_tree('share', prefix.share)

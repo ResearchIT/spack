@@ -26,15 +26,19 @@ from spack import *
 
 
 class Karma(Package):
-    """FIXME: Put a proper description of your package here."""
+    """Karma is a toolkit for interprocess communications, authentication,
+    encryption, graphics display, user interface and manipulating the Karma
+    network data structure. It contains KarmaLib (the structured libraries
+    and API) and a large number of modules (applications)
+    to perform many standard tasks. """
 
-    homepage = "http://www.example.com"
+    homepage = "https://www.atnf.csiro.au/computing/software/karma/"
     url      = "ftp://ftp.atnf.csiro.au/pub/software/karma/karma-1.7.25-common.tar.bz2"
 
     version('1.7.25-common', sha256='afda682d79c0923df5a6c447a32b09294da1582933abae3205c008104da54fbd')
 
-    depends_on('libx11')
-    depends_on('libxaw')
+    depends_on('libx11', type=('build', 'run'))
+    depends_on('libxaw', type=('build', 'run'))
 
     phases=[ 'install']
 

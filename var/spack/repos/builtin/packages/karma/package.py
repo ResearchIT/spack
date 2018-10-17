@@ -34,16 +34,21 @@ class Karma(Package):
     version('1.7.25-common', sha256='afda682d79c0923df5a6c447a32b09294da1582933abae3205c008104da54fbd')
 
     depends_on('libx11')
+    depends_on('libxaw')
 
     phases=[ 'install']
 
     resource(
-                name='karma',
+                name='karma-linux',
                 url='ftp://ftp.atnf.csiro.au/pub/software/karma/karma-1.7.25-amd64_Linux_libc6.3.tar.bz2',
                 sha256='effc3ed61c28b966b357147d90357d03c22d743c6af6edb49a863c6eb625a441',
-                destination='./karma-1.7.25'
+                destination='./'
                )
 
+    def setup_environment(self, spack_env, run_env):
+        run_env.prepend_path('LIBRARY_PATH', self.prefix.lib)
+        run_env.prepend_path('LD_LIBRARY_PATH', self.prefix.lib)
+
     def install(self, spec, prefix):
-        copy_tree('amd64_Linux_libc6.3/bin', prefix.bin)
-        copy_tree('amd64_Linux_libc6.3/lib', prefix.lib)
+        install_tree('./karma-1.7.25/amd64_Linux_libc6.3/bin', prefix.bin)
+        install_tree('./karma-1.7.25/amd64_Linux_libc6.3/lib', prefix.lib)

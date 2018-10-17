@@ -40,7 +40,7 @@ class Karma(Package):
     depends_on('libx11', type=('build', 'run'))
     depends_on('libxaw', type=('build', 'run'))
 
-    phases=[ 'install']
+    phases = ['install']
 
     resource(
                 name='karma-linux',

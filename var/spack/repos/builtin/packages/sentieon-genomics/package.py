@@ -43,8 +43,7 @@ from spack import *
 class SentieonGenomics(Package):
     """Sentieon provides complete solutions for secondary DNA analysis.
     Our software improves upon BWA, GATK, Mutect, and Mutect2 based pipelines.
-    The Sentieon tools are deployable
-    on any generic-CPU-based computing system."""
+    The Sentieon tools are deployable on any CPU-based computing system."""
 
     homepage = "https://www.sentieon.com/"
     url      = "https://s3.amazonaws.com/sentieon-release/software/sentieon-genomics-201808.01.tar.gz"

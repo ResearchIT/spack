@@ -24,6 +24,10 @@ class Ds(Package):
     
     phases = ['configure', 'install']
 
+
+    def configure_args(self):
+        configure_args.append("--with-ssl-dir=self.spec['openssl'].prefix")
+
     def configure(self, spec, prefix):
         configure = Executable(join_path(self.stage.source_path, 'unix/configure'))
         configure()

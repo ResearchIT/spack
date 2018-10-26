@@ -21,11 +21,19 @@ class Ds(Package):
     depends_on('tk')
     depends_on('libx11')
     depends_on('openssl')
-    
+    depends_on('tcl')
+    depends_on('libxml2')
+    depends_on('libxslt')
+ 
     phases = ['configure', 'install']
 
+    def patch(self):
+        filter_file('.usr..usr.local', self.spec['openssl'].prefix, "tls/configure")
+        filter_file('.usr.local.bin.xml2-config', self.spec['libxml2'].prefix, "tclxml/configure")
+        filter_file('.usr.local.bin.xslt.config', self.spec['libxslt'].prefix, "tclxml/configure")
 
     def configure_args(self):
+        configure = Executable(join_path(self.stage.source_path, 'tls/configure'))
         configure_args.append("--with-ssl-dir=self.spec['openssl'].prefix")
 
     def configure(self, spec, prefix):

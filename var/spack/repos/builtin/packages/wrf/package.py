@@ -24,6 +24,8 @@ class Wrf(AutotoolsPackage):
     depends_on('libpng')
     depends_on('zlib')
     depends_on('perl')
+    depends_on('hdf5')
+    depends_on('tcsh', type=('build'))
 
     depends_on('autoconf', type='build')
     depends_on('automake', type='build')
@@ -51,5 +53,5 @@ class Wrf(AutotoolsPackage):
 
 
     def build(self, spec, prefix):
-        sh = which('sh')
+        sh = which('csh')
         sh('./compile', 'em_real')

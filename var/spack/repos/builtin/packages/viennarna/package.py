@@ -26,6 +26,7 @@ class Viennarna(AutotoolsPackage):
     depends_on('python', type=('build', 'run'))
     depends_on('libsvm')
     depends_on('gsl')
+    extends('python', when='+python')
 
     def url_for_version(self, version):
         url = 'https://www.tbi.univie.ac.at/RNA/download/sourcecode/{0}_x/ViennaRNA-{1}.tar.gz'
@@ -39,7 +40,7 @@ class Viennarna(AutotoolsPackage):
         if self.spec.satisfies('@2.4.3:'):
             args.append('--without-swig')
 
-        if 'python@3:' in self.spec:
+        if 'python@3.0.0:' in self.spec:
             args.append('--with-python3')
 
         return args

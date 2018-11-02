@@ -42,6 +42,14 @@ class Wrf(AutotoolsPackage):
         filter_file('^#!/bin/csh -f', '#!/usr/bin/env csh', *files)
         filter_file('^#!/bin/csh', '#!/usr/bin/env csh', *files)
 
+        patch('Config.pl.patch')
+        patch('configure.defaults.patch')
+        patch('conf_tokens.patch')
+        patch('postamble.patch')
+        patch('configure.patch')
+        patch('makefile.patch')
+        patch('Makefile.patch')
+
     def configure(self, spec, prefix):
         install_answer = ['35\n', '3\n']
         install_answer_input = 'spack-config.in'

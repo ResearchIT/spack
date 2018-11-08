@@ -3,23 +3,6 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-# ----------------------------------------------------------------------------
-# If you submit this package back to Spack as a pull request,
-# please first remove this boilerplate and all FIXME comments.
-#
-# This is a template package file for Spack.  We've put "FIXME"
-# next to all the things you'll want to change. Once you've handled
-# them, you can save this file and test your package like this:
-#
-#     spack install bambam
-#
-# You can edit this file again by typing:
-#
-#     spack edit bambam
-#
-# See the Spack documentation for more information on packaging.
-# ----------------------------------------------------------------------------
-
 from spack import *
 
 
@@ -29,7 +12,8 @@ class Bambam(MakefilePackage):
     homepage = "http://udall-lab.byu.edu/Research/Software/BamBam"
     url      = "https://downloads.sourceforge.net/project/bambam/bambam-1.4.tgz"
 
-    version('1.4', '4a8a70bd26a68170a97e32bbca15a89f')
+    version('1.4', sha256='a9b178251d771aafb8c676d30a9af88ea2fc679c2a5672b515f86be0e69238f1')
+    version('1.3', sha256='de91af03c1c09921a3a7f816b4df0564213e57c1a6024f2bcd63c0e8f0733a50', preferred=True)
 
     depends_on('perl', type=('build', 'run'))
     depends_on('samtools')

@@ -31,5 +31,6 @@ class Bamtools(CMakePackage):
 
     @run_after('install')
     def install_extra_lib(self):
-        with working_dir('spack-build/src/utils'):
-            install('libbamtools-utils.a', prefix.lib64)
+        if self.spec.version.string == '2.3.0':
+            with working_dir('lib'):
+                install('libbamtools-utils.a', prefix.lib64)

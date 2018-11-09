@@ -17,7 +17,7 @@ class Bambam(MakefilePackage):
 
     depends_on('perl', type=('build', 'run'))
     depends_on('samtools')
-    depends_on('bamtools')
+    depends_on('bamtools@2.3.0')
     depends_on('htslib')
     depends_on('zlib')
 
@@ -35,5 +35,9 @@ class Bambam(MakefilePackage):
         spack_env.prepend_path('LIBRARY_PATH',
                                self.spec['samtools'].prefix.lib)
         spack_env.prepend_path('LIBRARY_PATH',
+                               self.spec['bamtools'].prefix.lib)
+        spack_env.prepend_path('LIBRARY_PATH',
+                               self.spec['bamtools'].prefix.lib.bamtools)
+        run_env.prepend_path('LD_LIBRARY_PATH',
                                self.spec['bamtools'].prefix.lib.bamtools)
         run_env.prepend_path('PATH', prefix.scripts)

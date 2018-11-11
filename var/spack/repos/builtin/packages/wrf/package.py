@@ -17,6 +17,8 @@ class Wrf(AutotoolsPackage):
     version('4.0', sha256='a5b072492746f96a926badda7e6b44cb0af26695afdd6c029a94de5e1e5eec73')
     version('3.9.1.1', sha256='e2c503c1b5adc2d3409b39d37df29d60188ff1de8c870eca15197a86d3538299')
 
+    #phases= ['autoreconf', 'patch', 'configure', 'build']
+
     depends_on('mpi')
     depends_on('netcdf')
     depends_on('netcdf-fortran')
@@ -33,22 +35,24 @@ class Wrf(AutotoolsPackage):
     depends_on('libtool', type='build')
 
     def setup_environment(self, spack_env, run_env):
-        spack_env.set('NETCDF', self.spec['netcdf-fortran'].prefix)
+        spack_env.set('NETCDF', self.spec['netcdf'].prefix)
+        spack_env.set('NETCDFF', self.spec['netcdf-fortran'].prefix)
 
-    def patch(self):
+    @run_after('autoreconf')
+    def patch2(self):
         # Make configure scripts use Spack's tcsh
         files = glob.glob('*.csh')
 
         filter_file('^#!/bin/csh -f', '#!/usr/bin/env csh', *files)
         filter_file('^#!/bin/csh', '#!/usr/bin/env csh', *files)
 
-        patch('Config.pl.patch')
-        patch('configure.defaults.patch')
-        patch('conf_tokens.patch')
-        patch('postamble.patch')
-        patch('configure.patch')
-        patch('makefile.patch')
-        patch('Makefile.patch')
+    patch('Config.pl.patch')
+    patch('configure.defaults.patch')
+    patch('conf_tokens.patch')
+    patch('postamble.patch')
+    patch('configure.patch')
+    patch('makefile.patch')
+    patch('Makefile.patch')
 
     def configure(self, spec, prefix):
         install_answer = ['35\n', '3\n']

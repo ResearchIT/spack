@@ -1,5 +1,5 @@
---- arch/Config.pl	2018-06-08 19:39:31.000000000 -0500
-+++ /home/baber/wrf-patches/Config.patched.pl	2018-11-02 13:33:12.165660199 -0500
+--- a/arch/Config.pl	2018-06-08 19:39:31.000000000 -0500
++++ b/arch/Config.pl	2018-11-02 13:33:12.165660199 -0500
 @@ -8,6 +8,7 @@
  select((select(STDOUT), $|=1)[0]);
  $sw_perl_path = perl ;

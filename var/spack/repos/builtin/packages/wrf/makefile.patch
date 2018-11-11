@@ -1,5 +1,5 @@
---- external/io_netcdf/makefile	2018-06-08 19:39:31.000000000 -0500
-+++ /home/baber/wrf-patches/makefile.patched	2018-11-02 13:33:12.280662529 -0500
+--- a/external/io_netcdf/makefile	2018-06-08 19:39:31.000000000 -0500
++++ b/external/io_netcdf/makefile	2018-11-02 13:33:12.280662529 -0500
 @@ -3,9 +3,9 @@
  OBJSL   = wrf_io.o field_routines.o module_wrfsi_static.o
  OBJS    = $(OBJSL)

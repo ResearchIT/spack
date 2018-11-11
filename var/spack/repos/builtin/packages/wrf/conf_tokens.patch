@@ -1,5 +1,5 @@
---- arch/conf_tokens	2018-06-08 19:39:31.000000000 -0500
-+++ /home/baber/wrf-patches/conf_tokens.patched	2018-11-02 13:33:12.347663887 -0500
+--- a/arch/conf_tokens	2018-06-08 19:39:31.000000000 -0500
++++ b/arch/conf_tokens	2018-11-02 13:33:12.347663887 -0500
 @@ -5,6 +5,7 @@
         CONFIGURE_DMPARALLEL
  CONFIGURE_RWORDSIZE

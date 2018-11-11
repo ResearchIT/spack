@@ -1,5 +1,5 @@
---- arch/postamble	2018-06-08 19:39:31.000000000 -0500
-+++ /home/baber/wrf-patches/postamble.patched	2018-11-02 13:33:12.162660138 -0500
+--- a/arch/postamble	2018-06-08 19:39:31.000000000 -0500
++++ b/arch/postamble	2018-11-02 13:33:12.162660138 -0500
 @@ -48,6 +48,7 @@
                        -I$(WRF_SRC_ROOT_DIR)/wrftladj \
                        -I$(WRF_SRC_ROOT_DIR)/chem -I$(WRF_SRC_ROOT_DIR)/inc \

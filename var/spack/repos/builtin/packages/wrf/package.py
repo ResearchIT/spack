@@ -19,6 +19,14 @@ class Wrf(AutotoolsPackage):
 
     #phases= ['autoreconf', 'patch', 'configure', 'build']
 
+    patch('Config.pl.patch')
+    patch('configure.defaults.patch')
+    patch('conf_tokens.patch')
+    patch('postamble.patch')
+    patch('configure.patch')
+    patch('makefile.patch')
+    patch('Makefile.patch')
+
     depends_on('mpi')
     depends_on('netcdf')
     depends_on('netcdf-fortran')
@@ -38,24 +46,23 @@ class Wrf(AutotoolsPackage):
         spack_env.set('NETCDF', self.spec['netcdf'].prefix)
         spack_env.set('NETCDFF', self.spec['netcdf-fortran'].prefix)
 
-    @run_after('autoreconf')
-    def patch2(self):
+    def patch(self):
         # Make configure scripts use Spack's tcsh
         files = glob.glob('*.csh')
 
         filter_file('^#!/bin/csh -f', '#!/usr/bin/env csh', *files)
         filter_file('^#!/bin/csh', '#!/usr/bin/env csh', *files)
+ 
+        filter_file('-I../../inc',
+                    '-I../../inc -I./ -I%s' % join_path(self.stage.source_path, 'external/io_int/module_ext_internal.mod'),
+                    'external/io_int/makefile')
+        filter_file('-I../ioapi_share',
+                    '-I../ioapi_share -I%s' % join_path(self.stage.source_path, 'external/io_int/module_ext_internal.mod'),
+                    'external/io_int/makefile')
 
-    patch('Config.pl.patch')
-    patch('configure.defaults.patch')
-    patch('conf_tokens.patch')
-    patch('postamble.patch')
-    patch('configure.patch')
-    patch('makefile.patch')
-    patch('Makefile.patch')
 
     def configure(self, spec, prefix):
-        install_answer = ['35\n', '3\n']
+        install_answer = ['34\n', '3\n']
         install_answer_input = 'spack-config.in'
         with open(install_answer_input, 'w') as f:
             f.writelines(install_answer)

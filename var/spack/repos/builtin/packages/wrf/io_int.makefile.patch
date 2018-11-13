@@ -1,0 +1,9 @@
+--- a/external/io_int/makefile
++++ b/external/io_int/makefile
+@@ -1,5 +1,5 @@
+ #makefile to build io_int that does binary i/o
+-
++.NOTPARALLEL:
+ OBJS    = io_int.o io_int_idx.o module_io_int_idx.o module_io_int_read.o
+ LIB     = libwrfio_int.a
+ WRF_MOD = ../../frame/pack_utils.o \

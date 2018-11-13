@@ -26,6 +26,7 @@ class Wrf(AutotoolsPackage):
     patch('configure.patch')
     patch('makefile.patch')
     patch('Makefile.patch')
+    patch('io_int.makefile.patch')
 
     depends_on('mpi')
     depends_on('netcdf')
@@ -57,7 +58,7 @@ class Wrf(AutotoolsPackage):
                     '-I../../inc -I./ -I%s' % join_path(self.stage.source_path, 'external/io_int/module_ext_internal.mod'),
                     'external/io_int/makefile')
         filter_file('-I../ioapi_share',
-                    '-I../ioapi_share -I%s' % join_path(self.stage.source_path, 'external/io_int/module_ext_internal.mod'),
+                    '-I../ioapi_share -I%s' % join_path(self.stage.source_path, 'external/io_int/'),
                     'external/io_int/makefile')
 
 

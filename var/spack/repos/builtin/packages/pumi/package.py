@@ -19,7 +19,14 @@ class Pumi(CMakePackage):
     homepage = "https://www.scorec.rpi.edu/pumi"
     git      = "https://github.com/SCOREC/core.git"
 
+    # We will use the scorec/core master branch as the 'nightly' version
+    # of pumi in spack.  The master branch is more stable than the
+    # scorec/core develop branch and we perfer not to expose spack users
+    # to the added instability. The spack version string is 'develop' since
+    # it compares greater than a numbered version (e.g., 2.1.0). The spack
+    # version string 'master' compares less than a numbered version.
     version('develop', branch='master')
+    version('2.2.0', commit='8c7e6f13943893b2bc1ece15003e4869a0e9634f')  # tag 2.2.0
     version('2.1.0', commit='840fbf6ec49a63aeaa3945f11ddb224f6055ac9f')
 
     variant('zoltan', default=False, description='Enable Zoltan Features')

@@ -19,7 +19,20 @@ class Wrf(AutotoolsPackage):
 
     variant('build_type',
             default='dmpar',
-            values=('serial', 'smpar', 'dmpar', 'dm+sm'))
+            values=('serial', 'smpar', 'dmpar', 'dmsm'))
+
+    variant('nesting',
+            default='basic',
+            values=('basic', 'preset', 'vortex')
+           )
+
+    variant('compile_type',
+            default='em_real',
+            values=('em_real', 'em_quarter_ss', 'em_b_wave', 'em_les',
+                    'em_heldsuarez', 'em_tropical_cyclone', 'em_hill2d_x',
+                    'em_squall2d_x', 'em_squall2d_y', 'em_grav2d_x',
+                    'em_seabreeze2d_x', 'em_scm_xy')
+           )
 
     # These patches deal with netcdf & netcdf-fortran being two diff things
     # Patches are based on:
@@ -45,7 +58,7 @@ class Wrf(AutotoolsPackage):
     depends_on('perl')
     # not sure if +fortran is required, but seems like a good idea
     depends_on('hdf5+fortran')
-    #build scripts use csh
+    # build scripts use csh
     depends_on('tcsh', type=('build'))
     # time is not installed on all systems b/c bash provides it
     # this fixes that for csh install scripts
@@ -69,7 +82,12 @@ class Wrf(AutotoolsPackage):
         filter_file('^#!/bin/csh', '#!/usr/bin/env csh', *files)
 
     def configure(self, spec, prefix):
-        install_answer = ['34\n', '3\n']
+        if spec.variants['build_type'].value == 'dmpar':
+            build_type_value = '34'
+        if spec.variants['nesting'].value == 'basic':
+            nesting_value = '1'
+
+        install_answer = [build_type_value + '\n', nesting_value + '\n']
         install_answer_input = 'spack-config.in'
         with open(install_answer_input, 'w') as f:
             f.writelines(install_answer)
@@ -79,7 +97,7 @@ class Wrf(AutotoolsPackage):
 
     def build(self, spec, prefix):
         sh = which('csh')
-        sh('./compile', 'em_real')
+        sh('./compile', spec.variants['compile_type'].value)
 
     def install(self, spec, prefix):
         install('main/wrf.exe', prefix.bin)

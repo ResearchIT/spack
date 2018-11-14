@@ -6,6 +6,7 @@
 from spack import *
 import glob
 
+
 class Wrf(AutotoolsPackage):
     """The Weather Research and Forecasting (WRF) Model
     is a next-generation mesoscale numerical weather prediction system designed
@@ -15,28 +16,40 @@ class Wrf(AutotoolsPackage):
     url      = "http://www2.mmm.ucar.edu/wrf/src/WRFV3.9.1.TAR.gz"
 
     version('4.0', sha256='a5b072492746f96a926badda7e6b44cb0af26695afdd6c029a94de5e1e5eec73')
-    version('3.9.1.1', sha256='e2c503c1b5adc2d3409b39d37df29d60188ff1de8c870eca15197a86d3538299')
 
-    #phases= ['autoreconf', 'patch', 'configure', 'build']
+    variant('build_type',
+            default='dmpar',
+            values=('serial', 'smpar', 'dmpar', 'dm+sm'))
 
-    patch('Config.pl.patch')
-    patch('configure.defaults.patch')
-    patch('conf_tokens.patch')
-    patch('postamble.patch')
-    patch('configure.patch')
-    patch('makefile.patch')
-    patch('Makefile.patch')
-    patch('io_int.makefile.patch')
+    # These patches deal with netcdf & netcdf-fortran being two diff things
+    # Patches are based on:
+    # https://github.com/easybuilders/easybuild-easyconfigs/blob/master/easybuild/easyconfigs/w/WRF/WRF-3.5_netCDF-Fortran_separate_path.patch
+    patch('patches/4.0/arch.Config.pl.patch')
+    patch('patches/4.0/arch.configure.defaults.patch')
+    patch('patches/4.0/arch.conf_tokens.patch')
+    patch('patches/4.0/arch.postamble.patch')
+    patch('patches/4.0/configure.patch')
+    patch('patches/4.0/external.io_netcdf.makefile.patch')
+    patch('patches/4.0/Makefile.patch')
 
     depends_on('mpi')
-    depends_on('netcdf')
+    # According to:
+    # http://www2.mmm.ucar.edu/wrf/users/docs/user_guide_v4/v4.0/users_guide_chap2.html#_Required_Compilers_and_1
+    # Section: "Required/Optional Libraries to Download"
+    # parallel netcdf should not be used
+    depends_on('netcdf~parallel-netcdf')
     depends_on('netcdf-fortran')
     depends_on('jasper')
     depends_on('libpng')
     depends_on('zlib')
     depends_on('perl')
-    depends_on('hdf5')
+    # not sure if +fortran is required, but seems like a good idea
+    depends_on('hdf5+fortran')
+    #build scripts use csh
     depends_on('tcsh', type=('build'))
+    # time is not installed on all systems b/c bash provides it
+    # this fixes that for csh install scripts
+    depends_on('time', type=('build')) 
 
     depends_on('autoconf', type='build')
     depends_on('automake', type='build')
@@ -45,22 +58,15 @@ class Wrf(AutotoolsPackage):
 
     def setup_environment(self, spack_env, run_env):
         spack_env.set('NETCDF', self.spec['netcdf'].prefix)
+        # This gets used via the applied patch files
         spack_env.set('NETCDFF', self.spec['netcdf-fortran'].prefix)
 
     def patch(self):
-        # Make configure scripts use Spack's tcsh
+        # Let's not assume csh is intalled in bin
         files = glob.glob('*.csh')
 
         filter_file('^#!/bin/csh -f', '#!/usr/bin/env csh', *files)
         filter_file('^#!/bin/csh', '#!/usr/bin/env csh', *files)
- 
-        filter_file('-I../../inc',
-                    '-I../../inc -I./ -I%s' % join_path(self.stage.source_path, 'external/io_int/module_ext_internal.mod'),
-                    'external/io_int/makefile')
-        filter_file('-I../ioapi_share',
-                    '-I../ioapi_share -I%s' % join_path(self.stage.source_path, 'external/io_int/'),
-                    'external/io_int/makefile')
-
 
     def configure(self, spec, prefix):
         install_answer = ['34\n', '3\n']
@@ -71,7 +77,11 @@ class Wrf(AutotoolsPackage):
             bash = which('bash')
             bash('./configure', input=f)
 
-
     def build(self, spec, prefix):
         sh = which('csh')
         sh('./compile', 'em_real')
+
+    def install(self, spec, prefix):
+        install('main/wrf.exe', prefix.bin)
+        install('main/ndown.exe', prefix.bin)
+        install('main/real.exe', prefix.bin)

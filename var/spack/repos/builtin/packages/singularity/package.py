@@ -19,7 +19,6 @@ class Singularity(AutotoolsPackage):
     # https://nvd.nist.gov/vuln/detail/CVE-2018-12021
     version('develop', branch='master')
     version('3.0.1', sha256='61baa5af4ab9c0beb6353e605bcffd568813e388fdd3775cb60e50ee33da1d3a')
-    version('3.0.1', sha256='61baa5af4ab9c0beb6353e605bcffd568813e388fdd3775cb60e50ee33da1d3a')
     version('2.6.0', sha256='7c425211a099f6fa6f74037e6e17be58fb5923b0bd11aea745e48ef83c488b49')
     version('2.5.2', '2edc1a8ac9a4d7d26fba6244f1c5fd95')
 

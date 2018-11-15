@@ -8,7 +8,8 @@ from spack import *
 
 class Singularity(AutotoolsPackage):
     """Singularity is a container platform focused on supporting 'Mobility of
-       Compute'"""
+       Compute'. Note: you will need to set FORCE_UNSAFE_CONFIGURE=1 to
+       correctly generate the setuid binaries"""
 
     homepage = "https://www.sylabs.io/singularity/"
     url      = "https://github.com/singularityware/singularity/releases/download/2.5.2/singularity-2.5.2.tar.gz"
@@ -17,6 +18,8 @@ class Singularity(AutotoolsPackage):
     # Versions before 2.5.2 suffer from a serious security problem.
     # https://nvd.nist.gov/vuln/detail/CVE-2018-12021
     version('develop', branch='master')
+    version('3.0.1', sha256='61baa5af4ab9c0beb6353e605bcffd568813e388fdd3775cb60e50ee33da1d3a')
+    version('3.0.1', sha256='61baa5af4ab9c0beb6353e605bcffd568813e388fdd3775cb60e50ee33da1d3a')
     version('2.6.0', sha256='7c425211a099f6fa6f74037e6e17be58fb5923b0bd11aea745e48ef83c488b49')
     version('2.5.2', '2edc1a8ac9a4d7d26fba6244f1c5fd95')
 

@@ -16,8 +16,8 @@ class Bambam(MakefilePackage):
     version('1.3', sha256='de91af03c1c09921a3a7f816b4df0564213e57c1a6024f2bcd63c0e8f0733a50', preferred=True)
 
     depends_on('perl', type=('build', 'run'))
-    depends_on('samtools')
-    depends_on('bamtools@:2.3.0')
+    depends_on('samtools', type=('link', 'build','run'))
+    depends_on('bamtools@:2.3.0', type=('link', 'build', 'run'))
     depends_on('htslib')
     depends_on('zlib')
 

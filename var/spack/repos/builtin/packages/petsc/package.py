@@ -24,6 +24,7 @@ class Petsc(Package):
     version('develop', branch='master')
     version('xsdk-0.2.0', tag='xsdk-0.2.0')
 
+    version('3.10.3', 'cd106babbae091604fee40c258737c84dec048949be779eaef5a745df3dc8de4')
     version('3.10.2', '63ed950653ae9b8d19daea47e24c0338')
     version('3.10.1', '2d0d5a9bd8112a4147a2a23f7f62a906')
     version('3.10.0', '0240c2ce8c54e47b3531a743ee844d41')
@@ -80,6 +81,9 @@ class Petsc(Package):
     variant('suite-sparse', default=False,
             description='Activates support for SuiteSparse')
 
+    variant('X', default=False,
+            description='Activate X support')
+
     # 3.8.0 has a build issue with MKL - so list this conflict explicitly
     conflicts('^intel-mkl', when='@3.8.0')
 
@@ -113,7 +117,7 @@ class Petsc(Package):
     depends_on('metis@5:~int64', when='@3.8:+metis~int64')
     depends_on('metis@5:+int64', when='@3.8:+metis+int64')
 
-    depends_on('hdf5+mpi+hl', when='+hdf5+mpi')
+    depends_on('hdf5+mpi+hl+fortran', when='+hdf5+mpi')
     depends_on('zlib', when='+hdf5')
     depends_on('parmetis', when='+metis+mpi')
     # Hypre does not support complex numbers.
@@ -146,6 +150,7 @@ class Petsc(Package):
     depends_on('trilinos@xsdk-0.2.0', when='@xsdk-0.2.0+trilinos+mpi')
     depends_on('trilinos@develop', when='@xdevelop+trilinos+mpi')
     depends_on('suite-sparse', when='+suite-sparse')
+    depends_on('libx11', when='+X')
 
     def mpi_dependent_options(self):
         if '~mpi' in self.spec:
@@ -183,7 +188,6 @@ class Petsc(Package):
 
     def install(self, spec, prefix):
         options = ['--with-ssl=0',
-                   '--with-x=0',
                    '--download-c2html=0',
                    '--download-sowing=0',
                    '--download-hwloc=0',
@@ -209,6 +213,11 @@ class Petsc(Package):
         options.extend([
             '--with-blas-lapack-lib=%s' % lapack_blas.joined()
         ])
+
+        if '+X' in spec:
+            options.append('--with-x=1')
+        else:
+            options.append('--with-x=0')
 
         if 'trilinos' in spec:
             options.append('--with-cxx-dialect=C++11')

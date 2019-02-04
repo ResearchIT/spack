@@ -31,6 +31,7 @@ class Braker(Package):
     depends_on('bamtools')
     depends_on('samtools')
 
+    @when('@:2.1.0')
     def install(self, spec, prefix):
         mkdirp(prefix.bin)
         mkdirp(prefix.lib)
@@ -38,6 +39,20 @@ class Braker(Package):
         install('filterGenemark.pl', prefix.bin)
         install('filterIntronsFindStrand.pl', prefix.bin)
         install('helpMod.pm', prefix.lib)
+
+    @when('@2.1.1:')
+    def install(self, spec, prefix):
+        mkdirp(prefix.bin)
+        mkdirp(prefix.lib)
+
+        with working_dir('scripts'):
+            bin_files = glob.iglob("*.pl")
+            for bin_file in bin_files:
+                install(bin_file, prefix.bin)
+
+            lib_files = glob.iglob("*.pm")
+            for lib_file in lib_files:
+                install(lib_file, prefix.lib)
 
     def setup_environment(self, spack_env, run_env):
         run_env.prepend_path('PERL5LIB', prefix.lib)

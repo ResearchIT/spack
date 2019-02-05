@@ -4,6 +4,7 @@
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 from spack import *
+import glob
 
 
 class Braker(Package):
@@ -30,6 +31,11 @@ class Braker(Package):
     depends_on('genemark-et')
     depends_on('bamtools')
     depends_on('samtools')
+    depends_on('perl-yaml-libyaml', type=('build', 'run'), when='@2.1.1:')
+    depends_on('perl-hash-merge', type=('build', 'run'), when='@2.1.1:')
+    depends_on('ncbi-rmblastn', type='run', when='@2.1.1:')
+    depends_on('perl-logger-simple', type=('build', 'run'), when='@2.1.1:')
+    depends_on('perl-yaml', type=('build', 'run'), when='@2.1.1:')
 
     @when('@:2.1.0')
     def install(self, spec, prefix):
@@ -44,6 +50,7 @@ class Braker(Package):
     def install(self, spec, prefix):
         mkdirp(prefix.bin)
         mkdirp(prefix.lib)
+        mkdirp(prefix.cfg)
 
         with working_dir('scripts'):
             bin_files = glob.iglob("*.pl")
@@ -53,6 +60,8 @@ class Braker(Package):
             lib_files = glob.iglob("*.pm")
             for lib_file in lib_files:
                 install(lib_file, prefix.lib)
+
+            install_tree('cfg', prefix.cfg)
 
     def setup_environment(self, spack_env, run_env):
         run_env.prepend_path('PERL5LIB', prefix.lib)

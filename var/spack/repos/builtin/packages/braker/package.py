@@ -36,6 +36,7 @@ class Braker(Package):
     depends_on('ncbi-rmblastn', type='run', when='@2.1.1:')
     depends_on('perl-logger-simple', type=('build', 'run'), when='@2.1.1:')
     depends_on('perl-yaml', type=('build', 'run'), when='@2.1.1:')
+    depends_on('py-biopython', type=('build', 'run'), when='@2.1.1:')
 
     @when('@:2.1.0')
     def install(self, spec, prefix):

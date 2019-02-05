@@ -15,6 +15,7 @@ class Braker(Package):
     url      = "https://github.com/Gaius-Augustus/BRAKER/archive/v2.1.2.tar.gz"
     # Releases have moved to github
 
+    version('develop', git='https://github.com/Gaius-Augustus/BRAKER.git', tag='master')
     version('2.1.2', sha256='9f178c5fe64ae358dcba9936802d24e330312e698a3f7930d1f91e58974129d3')
     version('2.1.1', sha256='10674382431975928217875df7c6953f841c69934057137c0d177c9dbfad18af',
             url='https://github.com/Gaius-Augustus/BRAKER/archive/v2.1.1-tag1.tar.gz')

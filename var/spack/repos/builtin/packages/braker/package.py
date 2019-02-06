@@ -38,6 +38,7 @@ class Braker(Package):
     depends_on('perl-logger-simple', type=('build', 'run'), when='@2.1.1:')
     depends_on('perl-yaml', type=('build', 'run'), when='@2.1.1:')
     depends_on('py-biopython', type=('build', 'run'), when='@2.1.1:')
+    depends_on('perl-file-homedir', type=('build', 'run'), when='@develop')
 
     @when('@:2.1.0')
     def install(self, spec, prefix):

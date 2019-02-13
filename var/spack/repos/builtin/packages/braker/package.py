@@ -15,7 +15,8 @@ class Braker(Package):
     url      = "https://github.com/Gaius-Augustus/BRAKER/archive/v2.1.2.tar.gz"
     # Releases have moved to github
 
-    version('develop', git='https://github.com/Gaius-Augustus/BRAKER.git', tag='master')
+    version('develop', git='https://github.com/Gaius-Augustus/BRAKER.git',
+            commit='60ea04de96e82b076c9474904293cd8c6fa4f68a')
     version('2.1.2', sha256='9f178c5fe64ae358dcba9936802d24e330312e698a3f7930d1f91e58974129d3')
     version('2.1.1', sha256='10674382431975928217875df7c6953f841c69934057137c0d177c9dbfad18af',
             url='https://github.com/Gaius-Augustus/BRAKER/archive/v2.1.1-tag1.tar.gz')
@@ -32,7 +33,6 @@ class Braker(Package):
     depends_on('genemark-et')
     depends_on('bamtools')
     depends_on('samtools')
-    depends_on('perl-yaml-libyaml', type=('build', 'run'), when='@2.1.1:')
     depends_on('perl-hash-merge', type=('build', 'run'), when='@2.1.1:')
     depends_on('ncbi-rmblastn', type='run', when='@2.1.1:')
     depends_on('perl-logger-simple', type=('build', 'run'), when='@2.1.1:')

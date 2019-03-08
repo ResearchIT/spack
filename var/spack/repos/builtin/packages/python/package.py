@@ -96,7 +96,7 @@ class Python(AutotoolsPackage):
     variant('lzma',     default=True,  description='Build lzma module')
     variant('pyexpat',  default=True,  description='Build pyexpat module')
     variant('ctypes',   default=True,  description='Build ctypes module')
-    variant('tkinter',  default=False, description='Build tkinter module')
+    variant('tk',  default=False, description='Build tkinter module')
     variant('uuid',     default=False, description='Build uuid module')
 
     depends_on('pkgconfig@0.9.0:', type='build')
@@ -105,9 +105,9 @@ class Python(AutotoolsPackage):
     # See detect_modules() in setup.py for details
     depends_on('readline', when='+readline')
     depends_on('ncurses', when='+readline')
-    depends_on('openssl', when='+ssl')
+    depends_on('openssl')
     depends_on('openssl@1.0.2:', when='@3.7:+ssl')  # https://docs.python.org/3/whatsnew/3.7.html#build-changes
-    depends_on('sqlite@3.0.8:', when='+sqlite3')
+    depends_on('sqlite@3.0.8:')
     depends_on('gdbm', when='+dbm')  # alternatively ndbm or berkeley-db
     depends_on('libnsl', when='+nis')
     depends_on('zlib@1.1.3:', when='+zlib')
@@ -115,8 +115,8 @@ class Python(AutotoolsPackage):
     depends_on('xz', when='@3.3:+lzma')
     depends_on('expat', when='+pyexpat')
     depends_on('libffi', when='+ctypes')
-    depends_on('tk', when='+tkinter')
-    depends_on('tcl', when='+tkinter')
+    depends_on('tk', when='+tk')
+    depends_on('tcl', when='+tk')
     depends_on('libuuid', when='+uuid')
 
     patch('tkinter.patch', when='@:2.8,3.3: platform=darwin')

@@ -204,6 +204,7 @@ class Openmpi(AutotoolsPackage):
             description='Enable MPI_THREAD_MULTIPLE support')
     variant('cuda', default=False, description='Enable CUDA support')
     variant('pmi', default=False, description='Enable PMI support')
+    variant('pmix', default=False, description='Enable PMIX support')
     variant('cxx_exceptions', default=True, description='Enable C++ Exception support')
     # Adding support to build a debug version of OpenMPI that activates
     # Memchecker, as described here:
@@ -252,13 +253,15 @@ class Openmpi(AutotoolsPackage):
     depends_on('ucx', when='fabrics=ucx')
     depends_on('libfabric', when='fabrics=libfabric')
     depends_on('slurm', when='schedulers=slurm')
+    depends_on('slurm', when='+pmi')
     depends_on('binutils+libiberty', when='fabrics=mxm')
+    depends_on('pmix', when='+pmix')
 
     conflicts('+cuda', when='@:1.6')  # CUDA support was added in 1.7
     conflicts('fabrics=psm2', when='@:1.8')  # PSM2 support was added in 1.10.0
     conflicts('fabrics=mxm', when='@:1.5.3')  # MXM support was added in 1.5.4
     conflicts('+pmi', when='@:1.5.4')  # PMI support was added in 1.5.5
-    conflicts('schedulers=slurm ~pmi', when='@1.5.4:',
+    conflicts('schedulers=slurm ~pmi', when='@1.5.4:~pmix',
               msg='+pmi is required for openmpi(>=1.5.5) to work with SLURM.')
 
     filter_compiler_wrappers('openmpi/*-wrapper-data*', relative_root='share')

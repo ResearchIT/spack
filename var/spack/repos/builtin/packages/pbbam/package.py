@@ -53,8 +53,8 @@ class Pbbam(CMakePackage):
         return options
 
     def install(self, spec, prefix):
-        install_tree('spack-build/bin', prefix.bin)
-        install_tree('spack-build/lib', prefix.lib)
+        install_tree('../spack-build/bin', prefix.bin)
+        install_tree('../spack-build/lib', prefix.lib)
         install_tree('include/pbbam', prefix.include.pbbam)
 
     def setup_dependent_environment(self, spack_env, run_env, dependent_spec):

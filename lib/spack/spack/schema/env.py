@@ -118,7 +118,6 @@ schema = {
                              }
                             }
                         ]
->>>>>>> upstream/features/stacks
                     }
                 }
             )

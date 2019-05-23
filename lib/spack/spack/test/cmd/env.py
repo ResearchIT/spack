@@ -15,6 +15,7 @@ import spack.environment as ev
 from spack.cmd.env import _env_create
 from spack.spec import Spec
 from spack.main import SpackCommand
+from spack.spec_list import SpecListError
 
 
 # everything here uses the mock_env_path
@@ -29,6 +30,13 @@ concretize = SpackCommand('concretize')
 stage      = SpackCommand('stage')
 uninstall  = SpackCommand('uninstall')
 find       = SpackCommand('find')
+
+
+@pytest.fixture()
+def env_deactivate():
+    yield
+    spack.environment._active_environment = None
+    os.environ.pop('SPACK_ENV', None)
 
 
 def test_add():
@@ -627,7 +635,7 @@ def test_env_without_view_install(
 
     test_env = ev.read('test')
     with pytest.raises(spack.environment.SpackEnvironmentError):
-        test_env.view()
+        test_env.default_view
 
     view_dir = tmpdir.mkdir('view')
 
@@ -660,7 +668,7 @@ env:
 
     e = ev.read('test')
     # Try retrieving the view object
-    view = e.view()
+    view = e.default_view
     assert view.get_spec('mpileaks')
 
 
@@ -807,3 +815,583 @@ def test_concretize_user_specs_together():
 
     assert all('mpich2' in spec for _, spec in e.concretized_specs())
     assert all('mpich' not in spec for _, spec in e.concretized_specs())
+
+
+def test_stack_yaml_definitions(tmpdir):
+    filename = str(tmpdir.join('spack.yaml'))
+    with open(filename, 'w') as f:
+        f.write("""\
+env:
+  definitions:
+    - packages: [mpileaks, callpath]
+  specs:
+    - $packages
+""")
+    with tmpdir.as_cwd():
+        env('create', 'test', './spack.yaml')
+        test = ev.read('test')
+
+        assert Spec('mpileaks') in test.user_specs
+        assert Spec('callpath') in test.user_specs
+
+
+def test_stack_yaml_add_to_list(tmpdir):
+    filename = str(tmpdir.join('spack.yaml'))
+    with open(filename, 'w') as f:
+        f.write("""\
+env:
+  definitions:
+    - packages: [mpileaks, callpath]
+  specs:
+    - $packages
+""")
+    with tmpdir.as_cwd():
+        env('create', 'test', './spack.yaml')
+        with ev.read('test'):
+            add('-l', 'packages', 'libelf')
+
+        test = ev.read('test')
+
+        assert Spec('libelf') in test.user_specs
+        assert Spec('mpileaks') in test.user_specs
+        assert Spec('callpath') in test.user_specs
+
+
+def test_stack_yaml_remove_from_list(tmpdir):
+    filename = str(tmpdir.join('spack.yaml'))
+    with open(filename, 'w') as f:
+        f.write("""\
+env:
+  definitions:
+    - packages: [mpileaks, callpath]
+  specs:
+    - $packages
+""")
+    with tmpdir.as_cwd():
+        env('create', 'test', './spack.yaml')
+        with ev.read('test'):
+            remove('-l', 'packages', 'mpileaks')
+
+        test = ev.read('test')
+
+        assert Spec('mpileaks') not in test.user_specs
+        assert Spec('callpath') in test.user_specs
+
+
+def test_stack_yaml_remove_from_list_force(tmpdir):
+    filename = str(tmpdir.join('spack.yaml'))
+    with open(filename, 'w') as f:
+        f.write("""\
+env:
+  definitions:
+    - packages: [mpileaks, callpath]
+  specs:
+    - matrix:
+        - [$packages]
+        - [^mpich, ^zmpi]
+""")
+    with tmpdir.as_cwd():
+        env('create', 'test', './spack.yaml')
+        with ev.read('test'):
+            concretize()
+            remove('-f', '-l', 'packages', 'mpileaks')
+            find_output = find('-c')
+
+        assert 'mpileaks' not in find_output
+
+        test = ev.read('test')
+        assert len(test.user_specs) == 2
+        assert Spec('callpath ^zmpi') in test.user_specs
+        assert Spec('callpath ^mpich') in test.user_specs
+
+
+def test_stack_yaml_attempt_remove_from_matrix(tmpdir):
+    filename = str(tmpdir.join('spack.yaml'))
+    with open(filename, 'w') as f:
+        f.write("""\
+env:
+  definitions:
+    - packages:
+        - matrix:
+            - [mpileaks, callpath]
+            - [target=be]
+  specs:
+    - $packages
+""")
+    with tmpdir.as_cwd():
+        env('create', 'test', './spack.yaml')
+        with pytest.raises(SpecListError):
+            with ev.read('test'):
+                remove('-l', 'packages', 'mpileaks')
+
+
+def test_stack_concretize_extraneous_deps(tmpdir, config, mock_packages):
+    filename = str(tmpdir.join('spack.yaml'))
+    with open(filename, 'w') as f:
+        f.write("""\
+env:
+  definitions:
+    - packages: [libelf, mpileaks]
+    - install:
+        - matrix:
+            - [$packages]
+            - ['^zmpi', '^mpich']
+  specs:
+    - $install
+""")
+    with tmpdir.as_cwd():
+        env('create', 'test', './spack.yaml')
+        with ev.read('test'):
+            concretize()
+
+        test = ev.read('test')
+
+        for user, concrete in test.concretized_specs():
+            assert concrete.concrete
+            assert not user.concrete
+            if user.name == 'libelf':
+                assert not concrete.satisfies('^mpi', strict=True)
+            elif user.name == 'mpileaks':
+                assert concrete.satisfies('^mpi', strict=True)
+
+
+def test_stack_concretize_extraneous_variants(tmpdir, config, mock_packages):
+    filename = str(tmpdir.join('spack.yaml'))
+    with open(filename, 'w') as f:
+        f.write("""\
+env:
+  definitions:
+    - packages: [libelf, mpileaks]
+    - install:
+        - matrix:
+            - [$packages]
+            - ['~shared', '+shared']
+  specs:
+    - $install
+""")
+    with tmpdir.as_cwd():
+        env('create', 'test', './spack.yaml')
+        with ev.read('test'):
+            concretize()
+
+        test = ev.read('test')
+
+        for user, concrete in test.concretized_specs():
+            assert concrete.concrete
+            assert not user.concrete
+            if user.name == 'libelf':
+                assert 'shared' not in concrete.variants
+            if user.name  == 'mpileaks':
+                assert (concrete.variants['shared'].value ==
+                        user.variants['shared'].value)
+
+
+def test_stack_definition_extension(tmpdir):
+    filename = str(tmpdir.join('spack.yaml'))
+    with open(filename, 'w') as f:
+        f.write("""\
+env:
+  definitions:
+    - packages: [libelf, mpileaks]
+    - packages: [callpath]
+  specs:
+    - $packages
+""")
+    with tmpdir.as_cwd():
+        env('create', 'test', './spack.yaml')
+
+        test = ev.read('test')
+
+        assert Spec('libelf') in test.user_specs
+        assert Spec('mpileaks') in test.user_specs
+        assert Spec('callpath') in test.user_specs
+
+
+def test_stack_definition_conditional_false(tmpdir):
+    filename = str(tmpdir.join('spack.yaml'))
+    with open(filename, 'w') as f:
+        f.write("""\
+env:
+  definitions:
+    - packages: [libelf, mpileaks]
+    - packages: [callpath]
+      when: 'False'
+  specs:
+    - $packages
+""")
+    with tmpdir.as_cwd():
+        env('create', 'test', './spack.yaml')
+
+        test = ev.read('test')
+
+        assert Spec('libelf') in test.user_specs
+        assert Spec('mpileaks') in test.user_specs
+        assert Spec('callpath') not in test.user_specs
+
+
+def test_stack_definition_conditional_true(tmpdir):
+    filename = str(tmpdir.join('spack.yaml'))
+    with open(filename, 'w') as f:
+        f.write("""\
+env:
+  definitions:
+    - packages: [libelf, mpileaks]
+    - packages: [callpath]
+      when: 'True'
+  specs:
+    - $packages
+""")
+    with tmpdir.as_cwd():
+        env('create', 'test', './spack.yaml')
+
+        test = ev.read('test')
+
+        assert Spec('libelf') in test.user_specs
+        assert Spec('mpileaks') in test.user_specs
+        assert Spec('callpath') in test.user_specs
+
+
+def test_stack_definition_conditional_with_variable(tmpdir):
+    filename = str(tmpdir.join('spack.yaml'))
+    with open(filename, 'w') as f:
+        f.write("""\
+env:
+  definitions:
+    - packages: [libelf, mpileaks]
+    - packages: [callpath]
+      when: platform == 'test'
+  specs:
+    - $packages
+""")
+    with tmpdir.as_cwd():
+        env('create', 'test', './spack.yaml')
+
+        test = ev.read('test')
+
+        assert Spec('libelf') in test.user_specs
+        assert Spec('mpileaks') in test.user_specs
+        assert Spec('callpath') in test.user_specs
+
+
+def test_stack_definition_complex_conditional(tmpdir):
+    filename = str(tmpdir.join('spack.yaml'))
+    with open(filename, 'w') as f:
+        f.write("""\
+env:
+  definitions:
+    - packages: [libelf, mpileaks]
+    - packages: [callpath]
+      when: re.search(r'foo', hostname) and env['test'] == 'THISSHOULDBEFALSE'
+  specs:
+    - $packages
+""")
+    with tmpdir.as_cwd():
+        env('create', 'test', './spack.yaml')
+
+        test = ev.read('test')
+
+        assert Spec('libelf') in test.user_specs
+        assert Spec('mpileaks') in test.user_specs
+        assert Spec('callpath') not in test.user_specs
+
+
+def test_stack_definition_conditional_invalid_variable(tmpdir):
+    filename = str(tmpdir.join('spack.yaml'))
+    with open(filename, 'w') as f:
+        f.write("""\
+env:
+  definitions:
+    - packages: [libelf, mpileaks]
+    - packages: [callpath]
+      when: bad_variable == 'test'
+  specs:
+    - $packages
+""")
+    with tmpdir.as_cwd():
+        with pytest.raises(NameError):
+            env('create', 'test', './spack.yaml')
+
+
+def test_stack_definition_conditional_add_write(tmpdir):
+    filename = str(tmpdir.join('spack.yaml'))
+    with open(filename, 'w') as f:
+        f.write("""\
+env:
+  definitions:
+    - packages: [libelf, mpileaks]
+    - packages: [callpath]
+      when: platform == 'test'
+  specs:
+    - $packages
+""")
+    with tmpdir.as_cwd():
+        env('create', 'test', './spack.yaml')
+        with ev.read('test'):
+            add('-l', 'packages', 'zmpi')
+
+        test = ev.read('test')
+
+        packages_lists = list(filter(lambda x: 'packages' in x,
+                                     test.yaml['env']['definitions']))
+
+        assert len(packages_lists) == 2
+        assert 'callpath' not in packages_lists[0]['packages']
+        assert 'callpath' in packages_lists[1]['packages']
+        assert 'zmpi' in packages_lists[0]['packages']
+        assert 'zmpi' not in packages_lists[1]['packages']
+
+
+def test_stack_combinatorial_view(tmpdir, mock_fetch, mock_packages,
+                                  mock_archive, install_mockery):
+    filename = str(tmpdir.join('spack.yaml'))
+    viewdir = str(tmpdir.join('view'))
+    with open(filename, 'w') as f:
+        f.write("""\
+env:
+  definitions:
+    - packages: [mpileaks, callpath]
+    - compilers: ['%%gcc', '%%clang']
+  specs:
+    - matrix:
+        - [$packages]
+        - [$compilers]
+
+  view:
+    combinatorial:
+      root: %s
+      projections:
+        'all': '{name}/{version}-{compiler.name}'""" % viewdir)
+    with tmpdir.as_cwd():
+        env('create', 'test', './spack.yaml')
+        with ev.read('test'):
+            install()
+
+        test = ev.read('test')
+        for _, spec in test.concretized_specs():
+            assert os.path.exists(
+                os.path.join(viewdir, spec.name, '%s-%s' %
+                             (spec.version, spec.compiler.name)))
+
+
+def test_stack_view_select(tmpdir, mock_fetch, mock_packages,
+                           mock_archive, install_mockery):
+    filename = str(tmpdir.join('spack.yaml'))
+    viewdir = str(tmpdir.join('view'))
+    with open(filename, 'w') as f:
+        f.write("""\
+env:
+  definitions:
+    - packages: [mpileaks, callpath]
+    - compilers: ['%%gcc', '%%clang']
+  specs:
+    - matrix:
+        - [$packages]
+        - [$compilers]
+
+  view:
+    combinatorial:
+      root: %s
+      select: ['%%gcc']
+      projections:
+        'all': '{name}/{version}-{compiler.name}'""" % viewdir)
+    with tmpdir.as_cwd():
+        env('create', 'test', './spack.yaml')
+        with ev.read('test'):
+            install()
+
+        test = ev.read('test')
+        for _, spec in test.concretized_specs():
+            if spec.satisfies('%gcc'):
+                assert os.path.exists(
+                    os.path.join(viewdir, spec.name, '%s-%s' %
+                                 (spec.version, spec.compiler.name)))
+            else:
+                assert not os.path.exists(
+                    os.path.join(viewdir, spec.name, '%s-%s' %
+                                 (spec.version, spec.compiler.name)))
+
+
+def test_stack_view_exclude(tmpdir, mock_fetch, mock_packages,
+                            mock_archive, install_mockery):
+    filename = str(tmpdir.join('spack.yaml'))
+    viewdir = str(tmpdir.join('view'))
+    with open(filename, 'w') as f:
+        f.write("""\
+env:
+  definitions:
+    - packages: [mpileaks, callpath]
+    - compilers: ['%%gcc', '%%clang']
+  specs:
+    - matrix:
+        - [$packages]
+        - [$compilers]
+
+  view:
+    combinatorial:
+      root: %s
+      exclude: [callpath]
+      projections:
+        'all': '{name}/{version}-{compiler.name}'""" % viewdir)
+    with tmpdir.as_cwd():
+        env('create', 'test', './spack.yaml')
+        with ev.read('test'):
+            install()
+
+        test = ev.read('test')
+        for _, spec in test.concretized_specs():
+            if not spec.satisfies('callpath'):
+                assert os.path.exists(
+                    os.path.join(viewdir, spec.name, '%s-%s' %
+                                 (spec.version, spec.compiler.name)))
+            else:
+                assert not os.path.exists(
+                    os.path.join(viewdir, spec.name, '%s-%s' %
+                                 (spec.version, spec.compiler.name)))
+
+
+def test_stack_view_select_and_exclude(tmpdir, mock_fetch, mock_packages,
+                                       mock_archive, install_mockery):
+    filename = str(tmpdir.join('spack.yaml'))
+    viewdir = str(tmpdir.join('view'))
+    with open(filename, 'w') as f:
+        f.write("""\
+env:
+  definitions:
+    - packages: [mpileaks, callpath]
+    - compilers: ['%%gcc', '%%clang']
+  specs:
+    - matrix:
+        - [$packages]
+        - [$compilers]
+
+  view:
+    combinatorial:
+      root: %s
+      select: ['%%gcc']
+      exclude: [callpath]
+      projections:
+        'all': '{name}/{version}-{compiler.name}'""" % viewdir)
+    with tmpdir.as_cwd():
+        env('create', 'test', './spack.yaml')
+        with ev.read('test'):
+            install()
+
+        test = ev.read('test')
+        for _, spec in test.concretized_specs():
+            if spec.satisfies('%gcc') and not spec.satisfies('callpath'):
+                assert os.path.exists(
+                    os.path.join(viewdir, spec.name, '%s-%s' %
+                                 (spec.version, spec.compiler.name)))
+            else:
+                assert not os.path.exists(
+                    os.path.join(viewdir, spec.name, '%s-%s' %
+                                 (spec.version, spec.compiler.name)))
+
+
+def test_stack_view_activate_from_default(tmpdir, mock_fetch, mock_packages,
+                                          mock_archive, install_mockery,
+                                          env_deactivate):
+    filename = str(tmpdir.join('spack.yaml'))
+    viewdir = str(tmpdir.join('view'))
+    with open(filename, 'w') as f:
+        f.write("""\
+env:
+  definitions:
+    - packages: [mpileaks, cmake]
+    - compilers: ['%%gcc', '%%clang']
+  specs:
+    - matrix:
+        - [$packages]
+        - [$compilers]
+
+  view:
+    default:
+      root: %s
+      select: ['%%gcc']""" % viewdir)
+    with tmpdir.as_cwd():
+        env('create', 'test', './spack.yaml')
+        with ev.read('test'):
+            install()
+
+        shell = env('activate', '--sh', 'test')
+        assert 'PATH' in shell
+        assert os.path.join(viewdir, 'bin') in shell
+
+
+def test_stack_view_no_activate_without_default(tmpdir, mock_fetch,
+                                                mock_packages, mock_archive,
+                                                install_mockery,
+                                                env_deactivate):
+    filename = str(tmpdir.join('spack.yaml'))
+    viewdir = str(tmpdir.join('view'))
+    with open(filename, 'w') as f:
+        f.write("""\
+env:
+  definitions:
+    - packages: [mpileaks, cmake]
+    - compilers: ['%%gcc', '%%clang']
+  specs:
+    - matrix:
+        - [$packages]
+        - [$compilers]
+
+  view:
+    not-default:
+      root: %s
+      select: ['%%gcc']""" % viewdir)
+    with tmpdir.as_cwd():
+        env('create', 'test', './spack.yaml')
+        with ev.read('test'):
+            install()
+
+        shell = env('activate', '--sh', 'test')
+        assert 'PATH' not in shell
+        assert viewdir not in shell
+
+
+def test_stack_view_multiple_views(tmpdir, mock_fetch, mock_packages,
+                                   mock_archive, install_mockery,
+                                   env_deactivate):
+    filename = str(tmpdir.join('spack.yaml'))
+    default_viewdir = str(tmpdir.join('default-view'))
+    combin_viewdir = str(tmpdir.join('combinatorial-view'))
+    with open(filename, 'w') as f:
+        f.write("""\
+env:
+  definitions:
+    - packages: [mpileaks, cmake]
+    - compilers: ['%%gcc', '%%clang']
+  specs:
+    - matrix:
+        - [$packages]
+        - [$compilers]
+
+  view:
+    default:
+      root: %s
+      select: ['%%gcc']
+    combinatorial:
+      root: %s
+      exclude: [callpath %%gcc]
+      projections:
+        'all': '{name}/{version}-{compiler.name}'""" % (default_viewdir,
+                                                        combin_viewdir))
+    with tmpdir.as_cwd():
+        env('create', 'test', './spack.yaml')
+        with ev.read('test'):
+            install()
+
+        shell = env('activate', '--sh', 'test')
+        assert 'PATH' in shell
+        assert os.path.join(default_viewdir, 'bin') in shell
+
+        test = ev.read('test')
+        for _, spec in test.concretized_specs():
+            if not spec.satisfies('callpath%gcc'):
+                assert os.path.exists(
+                    os.path.join(combin_viewdir, spec.name, '%s-%s' %
+                                 (spec.version, spec.compiler.name)))
+            else:
+                assert not os.path.exists(
+                    os.path.join(combin_viewdir, spec.name, '%s-%s' %
+                                 (spec.version, spec.compiler.name)))

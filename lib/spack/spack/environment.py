@@ -7,9 +7,12 @@ import os
 import re
 import sys
 import shutil
+import copy
 
 import ruamel.yaml
 import six
+
+from ordereddict_backport import OrderedDict
 
 import llnl.util.filesystem as fs
 import llnl.util.tty as tty
@@ -22,10 +25,13 @@ import spack.schema.env
 import spack.spec
 import spack.util.spack_json as sjson
 import spack.config
-from spack.spec import Spec
 from spack.filesystem_view import YamlFilesystemView
-
 from spack.util.environment import EnvironmentModifications
+import spack.architecture as architecture
+from spack.spec import Spec
+from spack.spec_list import SpecList, InvalidSpecConstraintError
+from spack.variant import UnknownVariantError
+from spack.util.executable import which
 
 #: environment variable used to indicate the active environment
 spack_env_var = 'SPACK_ENV'
@@ -136,7 +142,7 @@ def activate(
             cmds += 'export SPACK_OLD_PS1="${PS1}"; fi;\n'
             cmds += 'export PS1="%s ${PS1}";\n' % prompt
 
-    if add_view and env._view_path:
+    if add_view and env.default_view_path:
         cmds += env.add_view_to_shell(shell)
 
     return cmds
@@ -178,7 +184,7 @@ def deactivate(shell='sh'):
         cmds += 'unset SPACK_OLD_PS1; export SPACK_OLD_PS1;\n'
         cmds += 'fi;\n'
 
-    if _active_environment._view_path:
+    if _active_environment.default_view_path:
         cmds += _active_environment.rm_view_from_shell(shell)
 
     tty.debug("Deactivated environmennt '%s'" % _active_environment.name)
@@ -386,6 +392,29 @@ def _write_yaml(data, str_or_file):
                      default_flow_style=False)
 
 
+def _eval_conditional(string):
+    """Evaluate conditional definitions using restricted variable scope."""
+    arch = architecture.Arch(
+        architecture.platform(), 'default_os', 'default_target')
+    valid_variables = {
+        'target': str(arch.target),
+        'os': str(arch.os),
+        'platform': str(arch.platform),
+        'arch': str(arch),
+        'architecture': str(arch),
+        're': re,
+        'env': os.environ,
+    }
+    hostname_bin = which('hostname')
+    if hostname_bin:
+        hostname = str(hostname_bin(output=str, error=str)).strip()
+        valid_variables['hostname'] = hostname
+    else:
+        tty.warn("Spack was unable to find the executable `hostname`"
+                 " hostname will be unavailable in conditionals")
+    return eval(string, valid_variables)
+
+
 class Environment(object):
     def __init__(self, path, init_file=None, with_view=None):
         """Create a new environment.
@@ -427,39 +456,75 @@ class Environment(object):
                 if default_manifest:
                     self._set_user_specs_from_lockfile()
 
+            if os.path.exists(self.manifest_path):
+                # read the spack.yaml file, if exists
+                with open(self.manifest_path) as f:
+                    self._read_manifest(f)
+            elif self.concretized_user_specs:
+                # if not, take user specs from the lockfile
+                self._set_user_specs_from_lockfile()
+                self.yaml = _read_yaml(default_manifest_yaml)
+            else:
+                # if there's no manifest or lockfile, use the default
+                self._read_manifest(default_manifest_yaml)
+
         if with_view is False:
-            self._view_path = None
+            self.views = None
         elif isinstance(with_view, six.string_types):
-            self._view_path = with_view
+            self.views = {'default': self.create_view_descriptor(with_view)}
         # If with_view is None, then defer to the view settings determined by
         # the manifest file
 
     def _read_manifest(self, f):
         """Read manifest file and set up user specs."""
         self.yaml = _read_yaml(f)
+
+        self.read_specs = OrderedDict()
+
+        for item in list(self.yaml.values())[0].get('definitions', []):
+            entry = copy.deepcopy(item)
+            when = _eval_conditional(entry.pop('when', 'True'))
+            assert len(entry) == 1
+            if when:
+                name, spec_list = list(entry.items())[0]
+                user_specs = SpecList(name, spec_list, self.read_specs.copy())
+                if name in self.read_specs:
+                    self.read_specs[name].extend(user_specs)
+                else:
+                    self.read_specs[name] = user_specs
+
         spec_list = config_dict(self.yaml).get('specs')
-        if spec_list:
-            self.user_specs = [Spec(s) for s in spec_list if s]
+        user_specs = SpecList('specs', [s for s in spec_list if s],
+                              self.read_specs.copy())
+        self.read_specs['specs'] = user_specs
 
         enable_view = config_dict(self.yaml).get('view')
-        # enable_view can be true/false, a string, or None (if the manifest did
-        # not specify it)
+        # enable_view can be boolean, string, or None
         if enable_view is True or enable_view is None:
-            self._view_path = self.default_view_path
+            self.views = {'default': self.create_view_descriptor()}
         elif isinstance(enable_view, six.string_types):
-            self._view_path = enable_view
+            self.views = {'default': self.create_view_descriptor(enable_view)}
+        elif enable_view:
+            self.views = enable_view
         else:
-            # enable_view is False
-            self._view_path = None
+            self.views = None
+
+    @property
+    def user_specs(self):
+        return self.read_specs['specs']
 
         self.coconcretize = config_dict(self.yaml).get('concretize_together')
 
     def _set_user_specs_from_lockfile(self):
         """Copy user_specs from a read-in lockfile."""
-        self.user_specs = [Spec(s) for s in self.concretized_user_specs]
+        self.read_specs = {
+            'specs': SpecList(
+                'specs', [Spec(s) for s in self.concretized_user_specs]
+            )
+        }
 
     def clear(self):
-        self.user_specs = []              # current user specs
+        self.read_specs = {'specs': SpecList()}      # specs read from yaml
         self.concretized_user_specs = []  # user specs from last concretize
         self.concretized_order = []       # roots of last concretize, in order
         self.specs_by_hash = {}           # concretized specs by hash
@@ -512,8 +577,13 @@ class Environment(object):
     def log_path(self):
         return os.path.join(self.path, env_subdir_name, 'logs')
 
+    def create_view_descriptor(self, root=None):
+        if root is None:
+            root = self.create_view_path
+        return {'root': root, 'projections': {}}
+
     @property
-    def default_view_path(self):
+    def create_view_path(self):
         return os.path.join(self.env_subdir_path, 'view')
 
     @property
@@ -582,7 +652,7 @@ class Environment(object):
         """Remove this environment from Spack entirely."""
         shutil.rmtree(self.path)
 
-    def add(self, user_spec):
+    def add(self, user_spec, list_name='specs'):
         """Add a single user_spec (non-concretized) to the Environment
 
         Returns:
@@ -591,40 +661,76 @@ class Environment(object):
 
         """
         spec = Spec(user_spec)
-        if not spec.name:
-            raise SpackEnvironmentError(
-                'cannot add anonymous specs to an environment!')
-        elif not spack.repo.path.exists(spec.name):
-            raise SpackEnvironmentError('no such package: %s' % spec.name)
 
-        existing = set(s for s in self.user_specs if s.name == spec.name)
+        if list_name not in self.read_specs:
+            raise SpackEnvironmentError(
+                'No list %s exists in environment %s' % (list_name, self.name)
+            )
+
+        if list_name == 'specs':
+            if not spec.name:
+                raise SpackEnvironmentError(
+                    'cannot add anonymous specs to an environment!')
+            elif not spack.repo.path.exists(spec.name):
+                raise SpackEnvironmentError('no such package: %s' % spec.name)
+
+        list_to_change = self.read_specs[list_name]
+        existing = str(spec) in list_to_change.yaml_list
         if not existing:
-            self.user_specs.append(spec)
+            list_to_change.add(str(spec))
+            index = list(self.read_specs.keys()).index(list_name)
+
+            # read_specs is an OrderedDict, all list entries after the modified
+            # list may refer to the modified list. Update stale references
+            for i, (name, speclist) in enumerate(
+                    list(self.read_specs.items())[index + 1:], index + 1):
+                new_reference = dict((n, self.read_specs[n])
+                                     for n in list(self.read_specs.keys())[:i])
+                speclist.update_reference(new_reference)
+
         return bool(not existing)
 
-    def remove(self, query_spec, force=False):
+    def remove(self, query_spec, list_name='specs', force=False):
         """Remove specs from an environment that match a query_spec"""
         query_spec = Spec(query_spec)
 
-        # try abstract specs first
+        list_to_change = self.read_specs[list_name]
         matches = []
+
         if not query_spec.concrete:
-            matches = [s for s in self.user_specs if s.satisfies(query_spec)]
+            matches = [s for s in list_to_change if s.satisfies(query_spec)]
 
         if not matches:
             # concrete specs match against concrete specs in the env
             specs_hashes = zip(
                 self.concretized_user_specs, self.concretized_order)
             matches = [
-                s for s, h in specs_hashes if query_spec.dag_hash() == h]
+                s for s, h in specs_hashes
+                if query_spec.dag_hash() == h
+            ]
 
         if not matches:
-            raise SpackEnvironmentError("Not found: {0}".format(query_spec))
+            raise SpackEnvironmentError(
+                "Not found: {0}".format(query_spec))
 
+        old_specs = set(self.user_specs)
         for spec in matches:
-            if spec in self.user_specs:
-                self.user_specs.remove(spec)
+            if spec in list_to_change:
+                list_to_change.remove(spec)
 
+        # read_specs is an OrderedDict, all list entries after the modified
+        # list may refer to the modified list. Update stale references
+        index = list(self.read_specs.keys()).index(list_name)
+        for i, (name, speclist) in enumerate(
+                list(self.read_specs.items())[index + 1:], index + 1):
+            new_reference = dict((n, self.read_specs[n])
+                                 for n in list(self.read_specs.keys())[:i])
+            speclist.update_reference(new_reference)
+
+        # If force, update stale concretized specs
+        # Only check specs removed by this operation
+        new_specs = set(self.user_specs)
+        for spec in old_specs - new_specs:
             if force and spec in self.concretized_user_specs:
                 i = self.concretized_user_specs.index(spec)
                 del self.concretized_user_specs[i]
@@ -699,10 +805,11 @@ class Environment(object):
                 self._add_concrete_spec(s, concrete, new=False)
 
         # concretize any new user specs that we haven't concretized yet
-        for uspec in self.user_specs:
+        for uspec, uspec_constraints in zip(
+                self.user_specs, self.user_specs.specs_as_constraints):
             if uspec not in old_concretized_user_specs:
                 tty.msg('Concretizing %s' % uspec)
-                concrete = uspec.concretized()
+                concrete = _concretize_from_constraints(uspec_constraints)
                 self._add_concrete_spec(uspec, concrete)
 
                 # Display concretized spec to the user
@@ -725,7 +832,8 @@ class Environment(object):
             self._add_concrete_spec(spec, concrete)
         else:
             # spec might be in the user_specs, but not installed.
-            spec = next(s for s in self.user_specs if s.name == spec.name)
+            # TODO: Redo name-based comparison for old style envs
+            spec = next(s for s in self.user_specs if s.satisfies(user_spec))
             concrete = self.specs_by_hash.get(spec.dag_hash())
             if not concrete:
                 concrete = spec.concretized()
@@ -748,25 +856,61 @@ class Environment(object):
                 os.remove(build_log_link)
             os.symlink(spec.package.build_log_path, build_log_link)
 
-    def view(self):
-        if not self._view_path:
+    @property
+    def all_views(self):
+        if not self.views:
             raise SpackEnvironmentError(
                 "{0} does not have a view enabled".format(self.name))
 
-        return YamlFilesystemView(
-            self._view_path, spack.store.layout, ignore_conflicts=True)
+        return [YamlFilesystemView(view['root'], spack.store.layout,
+                                   ignore_conflicts=True,
+                                   projections=view['projections'])
+                for view in self.views.values()]
 
-    def update_view(self, view_path):
-        if self._view_path and self._view_path != view_path:
-            shutil.rmtree(self._view_path)
+    @property
+    def default_view(self):
+        if not self.views:
+            raise SpackEnvironmentError(
+                "{0} does not have a view enabled".format(self.name))
 
-        self._view_path = view_path
+        if 'default' not in self.views:
+            raise SpackEnvironmentError(
+                "{0} does not have a default view enabled".format(self.name))
 
-    def regenerate_view(self):
-        if not self._view_path:
+        return YamlFilesystemView(self.default_view_path,
+                                  spack.store.layout, ignore_confligs=True)
+
+    @property
+    def default_view_path(self):
+        if not self.views or 'default' not in self.views:
+            return None
+        return self.views['default']['root']
+
+    def update_default_view(self, viewpath):
+        if self.default_view_path and self.default_view_path != viewpath:
+            shutil.rmtree(self.default_view_path)
+
+        if viewpath:
+            if self.default_view_path:
+                self.views['default']['root'] = viewpath
+            elif self.views:
+                self.views['default'] = self.create_view_descriptor(viewpath)
+            else:
+                self.views = {'default': self.create_view_descriptor(viewpath)}
+        else:
+            self.views.pop('default', None)
+
+    def regenerate_views(self):
+        if not self.views:
             tty.debug("Skip view update, this environment does not"
                       " maintain a view")
             return
+
+        for name, view in zip(self.views.keys(), self.all_views):
+            self.regenerate_view(name, view)
+
+    def regenerate_view(self, name, view):
+        view_descriptor = self.views[name]
 
         specs_for_view = []
         for spec in self._get_environment_specs():
@@ -776,13 +920,23 @@ class Environment(object):
             specs_for_view.append(spack.spec.Spec.from_dict(
                 spec.to_dict(all_deps=False)
             ))
+
+        select = view_descriptor.get('select', [])
+        if select:
+            select_fn = lambda x: any(x.satisfies(s) for s in select)
+            specs_for_view = list(filter(select_fn, specs_for_view))
+
+        exclude = view_descriptor.get('exclude', [])
+        if exclude:
+            exclude_fn = lambda x: not any(x.satisfies(e) for e in exclude)
+            specs_for_view = list(filter(exclude_fn, specs_for_view))
+
         installed_specs_for_view = set(s for s in specs_for_view
                                        if s.package.installed)
 
-        view = self.view()
         view.clean()
         specs_in_view = set(view.get_all_specs())
-        tty.msg("Updating view at {0}".format(self._view_path))
+        tty.msg("Updating view at {0}".format(view_descriptor['root']))
 
         rm_specs = specs_in_view - installed_specs_for_view
         view.remove_specs(*rm_specs, with_dependents=False)
@@ -804,7 +958,7 @@ class Environment(object):
         path_updates = list()
         for var, subdirs in updates:
             paths = filter(lambda x: os.path.exists(x),
-                           list(os.path.join(self._view_path, x)
+                           list(os.path.join(self.default_view_path, x)
                                 for x in subdirs))
             path_updates.append((var, paths))
         return path_updates
@@ -869,7 +1023,7 @@ class Environment(object):
                     os.remove(build_log_link)
                 os.symlink(spec.package.build_log_path, build_log_link)
 
-        self.regenerate_view()
+        self.regenerate_views()
 
     def all_specs_by_hash(self):
         """Map of hashes to spec for all specs in this environment."""
@@ -938,8 +1092,7 @@ class Environment(object):
         If these specs appear under different user_specs, only one copy
         is added to the list returned.
         """
-        package_to_spec = {}
-        spec_list = list()
+        spec_set = set()
 
         for spec_hash in self.concretized_order:
             spec = self.specs_by_hash[spec_hash]
@@ -947,17 +1100,9 @@ class Environment(object):
             specs = (spec.traverse(deptype=('link', 'run'))
                      if recurse_dependencies else (spec,))
 
-            for dep in specs:
-                prior = package_to_spec.get(dep.name)
-                if prior and prior != dep:
-                    tty.debug("{0} takes priority over {1}"
-                              .format(package_to_spec[dep.name].format(),
-                                      dep.format()))
-                else:
-                    package_to_spec[dep.name] = dep
-                    spec_list.append(dep)
+            spec_set.update(specs)
 
-        return spec_list
+        return list(spec_set)
 
     def _to_lockfile_dict(self):
         """Create a dictionary to store a lockfile for this environment."""
@@ -1054,18 +1199,48 @@ class Environment(object):
         # invalidate _repo cache
         self._repo = None
 
-        # put the new user specs in the YAML
-        yaml_dict = config_dict(self.yaml)
-        yaml_spec_list = yaml_dict.setdefault('specs', [])
-        yaml_spec_list[:] = [str(s) for s in self.user_specs]
+        # put any chagnes in the definitions in the YAML
+        for name, speclist in list(self.read_specs.items())[:-1]:
+            conf = config_dict(self.yaml)
+            active_yaml_lists = [l for l in conf.get('definitions', [])
+                                 if name in l and
+                                 _eval_conditional(l.get('when', 'True'))]
 
-        if self._view_path == self.default_view_path:
-            view = True
-        elif self._view_path:
-            view = self._view_path
+            # Remove any specs in yaml that are not in internal representation
+            for ayl in active_yaml_lists:
+                # If it's not a string, it's a matrix. Those can't have changed
+                ayl[name][:] = [s for s in ayl.setdefault(name, [])
+                                if not isinstance(s, str) or
+                                Spec(s) in speclist.specs]
+
+            # Put the new specs into the first active list from the yaml
+            new_specs = [entry for entry in speclist.yaml_list
+                         if isinstance(entry, str) and
+                         not any(entry in ayl[name]
+                                 for ayl in active_yaml_lists)]
+            list_for_new_specs = active_yaml_lists[0].setdefault(name, [])
+            list_for_new_specs[:] = list_for_new_specs + new_specs
+
+        # put the new user specs in the YAML.
+        # This can be done directly because there can't be multiple definitions
+        # nor when clauses for `specs` list.
+        yaml_spec_list = config_dict(self.yaml).setdefault('specs', [])
+        yaml_spec_list[:] = self.user_specs.yaml_list
+
+        if self.views and len(self.views) == 1 and self.default_view_path:
+            path = self.default_view_path
+            if self.views['default'] == self.create_view_descriptor():
+                view = True
+            elif self.views['default'] == self.create_view_descriptor(path):
+                view = path
+            else:
+                view = self.views
+        elif self.views:
+            view = self.views
         else:
             view = False
 
+        yaml_dict = config_dict(self.yaml)
         if view is not True:
             # The default case is to keep an active view inside of the
             # Spack environment directory. To avoid cluttering the config,
@@ -1080,7 +1255,7 @@ class Environment(object):
 
         # TODO: for operations that just add to the env (install etc.) this
         # could just call update_view
-        self.regenerate_view()
+        self.regenerate_views()
 
     def __enter__(self):
         self._previous_active = _active_environment
@@ -1091,6 +1266,48 @@ class Environment(object):
         deactivate()
         if self._previous_active:
             activate(self._previous_active)
+
+
+def _concretize_from_constraints(spec_constraints):
+    # Accept only valid constraints from list and concretize spec
+    # Get the named spec even if out of order
+    root_spec = [s for s in spec_constraints if s.name]
+    if len(root_spec) != 1:
+        m = 'The constraints %s are not a valid spec ' % spec_constraints
+        m += 'concretization target. all specs must have a single name '
+        m += 'constraint for concretization.'
+        raise InvalidSpecConstraintError(m)
+    spec_constraints.remove(root_spec[0])
+
+    invalid_constraints = []
+    while True:
+        # Attach all anonymous constraints to one named spec
+        s = root_spec[0].copy()
+        for c in spec_constraints:
+            if c not in invalid_constraints:
+                s.constrain(c)
+        try:
+            return s.concretized()
+        except spack.spec.InvalidDependencyError as e:
+            dep_index = e.message.index('depend on ') + len('depend on ')
+            invalid_msg = e.message[dep_index:]
+            invalid_deps_string = ['^' + d.strip(',')
+                                   for d in invalid_msg.split()
+                                   if d != 'or']
+            invalid_deps = [c for c in spec_constraints
+                            if any(c.satisfies(invd)
+                                   for invd in invalid_deps_string)]
+            if len(invalid_deps) != len(invalid_deps_string):
+                raise e
+            invalid_constraints.extend(invalid_deps)
+        except UnknownVariantError as e:
+            invalid_variants = re.findall(r"'(\w+)'", e.message)
+            invalid_deps = [c for c in spec_constraints
+                            if any(name in c.variants
+                                   for name in invalid_variants)]
+            if len(invalid_deps) != len(invalid_variants):
+                raise e
+            invalid_constraints.extend(invalid_deps)
 
 
 def make_repo_path(root):

@@ -31,7 +31,7 @@ class NodeJs(Package):
 
     depends_on('libtool', type='build', when=sys.platform != 'darwin')
     depends_on('pkgconfig', type='build')
-    depends_on('python@2.7:2.8', type='build')
+    depends_on('python@2.7:2.8,3:', type='build')
     # depends_on('bash-completion', when="+bash-completion")
     depends_on('icu4c', when='+icu4c')
     depends_on('openssl@1.0.2d:1.0.99', when='@:9+openssl')

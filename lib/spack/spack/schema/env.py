@@ -50,6 +50,10 @@ schema = {
                     },
                     'view': {
                         'type': ['boolean', 'string']
+                    },
+                    'concretize_together': {
+                        'type': 'boolean',
+                        'default': False
                     }
                 }
             )

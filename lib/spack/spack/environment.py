@@ -15,6 +15,7 @@ import llnl.util.filesystem as fs
 import llnl.util.tty as tty
 from llnl.util.tty.color import colorize
 
+import spack.concretize
 import spack.error
 import spack.repo
 import spack.schema.env
@@ -401,6 +402,7 @@ class Environment(object):
                 path to the view.
         """
         self.path = os.path.abspath(path)
+        self.coconcretize = False
         self.clear()
 
         if init_file:
@@ -449,6 +451,8 @@ class Environment(object):
         else:
             # enable_view is False
             self._view_path = None
+
+        self.coconcretize = config_dict(self.yaml).get('concretize_together')
 
     def _set_user_specs_from_lockfile(self):
         """Copy user_specs from a read-in lockfile."""
@@ -648,6 +652,38 @@ class Environment(object):
             self.concretized_order = []
             self.specs_by_hash = {}
 
+        if self.coconcretize:
+            self._concretize_together()
+        else:
+            self._concretize_separately()
+
+    def _concretize_together(self):
+        # Exit early if the set of concretized specs is the set of user specs
+        user_specs_did_not_change = not bool(
+            set(self.user_specs) - set(self.concretized_user_specs)
+        )
+        if user_specs_did_not_change:
+            return
+
+        self.concretized_user_specs = []
+        self.concretized_order = []
+        self.specs_by_hash = {}
+
+        concrete_specs = spack.concretize.concretize_specs_together(
+            *self.user_specs
+        )
+        for abstract, concrete in zip(self.user_specs, concrete_specs):
+            self._add_concrete_spec(abstract, concrete)
+
+            # Display concretized spec to the user
+            sys.stdout.write(concrete.tree(
+                recurse_dependencies=True,
+                status_fn=spack.spec.Spec.install_status,
+                hashlen=7, hashes=True)
+            )
+            print()
+
+    def _concretize_separately(self):
         # keep any concretized specs whose user specs are still in the manifest
         old_concretized_user_specs = self.concretized_user_specs
         old_concretized_order = self.concretized_order
@@ -1049,7 +1085,7 @@ class Environment(object):
     def __enter__(self):
         self._previous_active = _active_environment
         activate(self)
-        return
+        return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         deactivate()

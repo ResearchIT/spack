@@ -14,13 +14,15 @@ class Pasa(MakefilePackage):
 
     version('2.4.1.FULL', sha256='aa6a71e104b30fa8ef96217452f8d34fbb4713103318bd62369fcf26e08c4970')
 
-    depends_on('perl', type='run')
+    depends_on('perl+threads', type='run')
     depends_on('perl-db-file', type='run')
     depends_on('perl-dbd-mysql', type='run')
     depends_on('perl-dbd-sqlite', type='run')
+    depends_on('perl-uri', type='run')
     depends_on('gmap-gsnap', type='run')
     depends_on('blat', type='run')
     depends_on('fasta', type='run')
+    depends_on('samtools', type='run')
 
     def setup_environment(self, spack_env, run_env):
         run_env.set('PASAHOME', self.prefix)

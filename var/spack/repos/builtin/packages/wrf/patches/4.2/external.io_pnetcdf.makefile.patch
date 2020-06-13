@@ -1,0 +1,34 @@
+diff --git a/external/io_pnetcdf/Makefile b/external/io_pnetcdf/Makefile
+index e7366e0..f7d1d36 100644
+--- a/external/io_pnetcdf/Makefile
++++ b/external/io_pnetcdf/Makefile
+@@ -9,8 +9,8 @@ CODE    = ext_pnc_get_dom_ti.code \
+ 	  ext_pnc_put_var_td.code \
+ 	  ext_pnc_put_var_ti.code \
+ 	  transpose.code 
++FFLAGS  = $(FCFLAGS) -I$(NETCDFFPATH)/include -I../ioapi_share
++LIBS    = -L$(PNETCDFPATH)/lib -lpnetcdf
+-FFLAGS  = $(FCFLAGS) -I$(NETCDFPATH)/include -I../ioapi_share
+-LIBS    = -L$(NETCDFPATH)/lib -lpnetcdf
+ CPP1    = $(CPP) -P $(TRADFLAG)
+ M4      = m4 -Uinclude -Uindex -Ulen
+ AR      = ar
+@@ -25,15 +25,15 @@ libwrfio_pnf.a:		$(OBJS) $(CODE)
+ 			$(RANLIB) libwrfio_pnf.a
+ 
+ wrf_io.o:               wrf_io.F90 $(CODE)
++			$(CPP1) -I$(NETCDFFPATH)/include -I../ioapi_share wrf_io.F90 | $(M4) - > wrf_io.f
+-			$(CPP1) -I$(NETCDFPATH)/include -I../ioapi_share wrf_io.F90 | $(M4) - > wrf_io.f
+ 			$(FC) $(FFLAGS) -c wrf_io.f
+ 
+ module_wrfsi_static.o:  module_wrfsi_static.F90
++			$(CPP1) -I$(NETCDFFPATH)/include -I../ioapi_share module_wrfsi_static.F90 > module_wrfsi_static.f
+-			$(CPP1) -I$(NETCDFPATH)/include -I../ioapi_share module_wrfsi_static.F90 > module_wrfsi_static.f
+ 			$(FC) $(FFLAGS) -c module_wrfsi_static.f
+ 
+ field_routines.o:	field_routines.F90 wrf_io.o
++			$(CPP1) -I$(NETCDFFPATH)/include -I../ioapi_share field_routines.F90 > field_routines.f
+-			$(CPP1) -I$(NETCDFPATH)/include -I../ioapi_share field_routines.F90 > field_routines.f
+ 			$(FC) $(FFLAGS) -c field_routines.f
+ 
+ superclean:

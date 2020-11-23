@@ -21,6 +21,7 @@ class RRstan(RPackage):
     url      = "https://cloud.r-project.org/src/contrib/rstan_2.10.1.tar.gz"
     list_url = "https://cloud.r-project.org/src/contrib/Archive/rstan"
 
+    version('2.21.2', sha256='e30e04d38a612e2cb3ac69b53eaa19f7ede8b3548bf82f7892a2e9991d46054a')
     version('2.19.2', sha256='31e4ceb9c327cd62873225097ffa538c2ac4cb0547c52271e52e4c7652d508da')
     version('2.18.2', sha256='4d75dad95610d5a1d1c89a4ddbaf4326462e4ffe0ad28aed2129f2d9292e70ff')
     version('2.17.2', sha256='a7b197e6e42f8f0c302da9205afc19a0261eaf6af1425854303d2ce6cbd36729')
@@ -29,14 +30,22 @@ class RRstan(RPackage):
     depends_on('r@3.0.2:', when='@:2.17.3', type=('build', 'run'))
     depends_on('r@3.4.0:', when='@2.18.1:', type=('build', 'run'))
     depends_on('r-stanheaders@2.18.1:', type=('build', 'run'))
+    depends_on('r-stanheaders@2.21.0:', when='@2.21.2:', type=('build', 'run'))
+    depends_on('r-rcppparallel@5.0.1:', when='@2.21.2:', type=('build', 'run'))
+    depends_on('r-rcppeigen@0.3.3.3.0:', when='@2.21.2:', type=('build', 'run'))
+    depends_on('r-withr', when='@2.21.2:', type=('build', 'run'))
+    depends_on('r-v8', when='@2.21.2:', type=('build', 'run'))
     depends_on('r-ggplot2@2.0.0:', type=('build', 'run'))
+    depends_on('r-ggplot2@3.0.0:', when='@2.21.2:', type=('build', 'run'))
     depends_on('r-inline', type=('build', 'run'))
     depends_on('r-gridextra@2.0.0:', type=('build', 'run'))
     depends_on('r-rcpp@0.12.0:', type=('build', 'run'))
     depends_on('r-loo@2.0.0:', when='@2.18:', type=('build', 'run'))
+    depends_on('r-loo@2.3.0:', when='@2.21.2:', type=('build', 'run'))
     depends_on('r-pkgbuild', when='@2.18:', type=('build', 'run'))
     depends_on('r-rcppeigen@0.3.3.3.0:', type=('build', 'run'))
     depends_on('r-bh@1.69.0:', type=('build', 'run'))
+    depends_on('r-bh@1.72.0-2:', when='@2.21.2:', type=('build', 'run'))
     depends_on('gmake', type='build')
     depends_on('pandoc', type='build')
 

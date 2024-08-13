@@ -366,6 +366,7 @@ class Gromacs(CMakePackage, CudaPackage):
                 "src/gromacs/commandline/cmdlineprogramcontext.cpp",
                 string=True,
             )
+        filter_file(r"-march=[a-zA-Z\-0-9]", "", join_path("cmake", "gmxSimdFlags.cmake"))
 
         if "+plumed" in self.spec:
             self.spec["plumed"].package.apply_patch(self)

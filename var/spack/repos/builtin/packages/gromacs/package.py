@@ -186,6 +186,26 @@ class Gromacs(CMakePackage, CudaPackage):
     variant("cycle_subcounters", default=False, description="Enables cycle subcounters")
 
     variant("cp2k", default=False, description="CP2K QM/MM interface integration")
+    variant(
+        "simd",
+        default="Auto",
+        values=(
+            "Auto",
+            "None",
+            "SSE2",
+            "SSE4.1",
+            "AVX_128_FMA",
+            "AVX_256",
+            "AVX2_128",
+            "AVX2_256",
+            "AVX_512",
+            "AVX_512_KNL",
+            "IBM_VSX",
+            "ARM_NEON_ASIMD",
+            "ARM_SVE",
+        ),
+        description="Build with selected simd support, or let spack decide",
+    )
     conflicts(
         "+cp2k", when="@:2021", msg="CP2K QM/MM support have been introduced in GROMACS 2022"
     )
@@ -579,62 +599,65 @@ class CMakeBuilder(spack.build_systems.cmake.CMakeBuilder):
         if "~gmxapi" in self.spec:
             options.append("-DGMXAPI=OFF")
 
-        # Activate SIMD based on properties of the target
         target = self.spec.target
-        if target >= "zen4":
-            # AMD Family 17h (EPYC Genoa)
-            options.append("-DGMX_SIMD=AVX_512")
-        elif target >= "zen2":
-            # AMD Family 17h (EPYC Rome)
-            options.append("-DGMX_SIMD=AVX2_256")
-        elif target >= "zen":
-            # AMD Family 17h (EPYC Naples)
-            options.append("-DGMX_SIMD=AVX2_128")
-        elif target >= "bulldozer":
-            # AMD Family 15h
-            options.append("-DGMX_SIMD=AVX_128_FMA")
-        elif "vsx" in target:
-            # IBM Power 7 and beyond
-            if self.spec.satisfies("%nvhpc"):
-                options.append("-DGMX_SIMD=None")
+        if self.spec.satisfies("simd=Auto"):
+            # Activate SIMD based on properties of the target
+            if target >= "zen4":
+                # AMD Family 17h (EPYC Genoa)
+                options.append("-DGMX_SIMD=AVX_512")
+            elif target >= "zen2":
+                # AMD Family 17h (EPYC Rome)
+                options.append("-DGMX_SIMD=AVX2_256")
+            elif target >= "zen":
+                # AMD Family 17h (EPYC Naples)
+                options.append("-DGMX_SIMD=AVX2_128")
+            elif target >= "bulldozer":
+                # AMD Family 15h
+                options.append("-DGMX_SIMD=AVX_128_FMA")
+            elif "vsx" in target:
+                # IBM Power 7 and beyond
+                if self.spec.satisfies("%nvhpc"):
+                    options.append("-DGMX_SIMD=None")
+                else:
+                    options.append("-DGMX_SIMD=IBM_VSX")
+            elif target.family == "aarch64":
+                # ARMv8
+                if self.spec.satisfies("%nvhpc"):
+                    options.append("-DGMX_SIMD=None")
+                elif "sve" in target.features and "+sve" in self.spec:
+                    options.append("-DGMX_SIMD=ARM_SVE")
+                else:
+                    options.append("-DGMX_SIMD=ARM_NEON_ASIMD")
+            elif target == "mic_knl":
+                # Intel KNL
+                options.append("-DGMX_SIMD=AVX_512_KNL")
             else:
-                options.append("-DGMX_SIMD=IBM_VSX")
-        elif target.family == "aarch64":
-            # ARMv8
-            if self.spec.satisfies("%nvhpc"):
-                options.append("-DGMX_SIMD=None")
-            elif "sve" in target.features and "+sve" in self.spec:
-                options.append("-DGMX_SIMD=ARM_SVE")
-            else:
-                options.append("-DGMX_SIMD=ARM_NEON_ASIMD")
-        elif target == "mic_knl":
-            # Intel KNL
-            options.append("-DGMX_SIMD=AVX_512_KNL")
+                # Other architectures
+                simd_features = [
+                    ("sse2", "SSE2"),
+                    ("sse4_1", "SSE4.1"),
+                    ("avx", "AVX_256"),
+                    ("axv128", "AVX2_128"),
+                    ("avx2", "AVX2_256"),
+                    ("avx512", "AVX_512"),
+                ]
+
+                # Workaround NVIDIA compiler bug when avx512 is enabled
+                if self.spec.satisfies("%nvhpc") and ("avx512", "AVX_512") in simd_features:
+                    simd_features.remove(("avx512", "AVX_512"))
+
+                feature_set = False
+                for feature, flag in reversed(simd_features):
+                    if feature in target:
+                        options.append("-DGMX_SIMD:STRING={0}".format(flag))
+                        feature_set = True
+                        break
+
+                # Fall back
+                if not feature_set:
+                    options.append("-DGMX_SIMD:STRING=None")
         else:
-            # Other architectures
-            simd_features = [
-                ("sse2", "SSE2"),
-                ("sse4_1", "SSE4.1"),
-                ("avx", "AVX_256"),
-                ("axv128", "AVX2_128"),
-                ("avx2", "AVX2_256"),
-                ("avx512", "AVX_512"),
-            ]
-
-            # Workaround NVIDIA compiler bug when avx512 is enabled
-            if self.spec.satisfies("%nvhpc") and ("avx512", "AVX_512") in simd_features:
-                simd_features.remove(("avx512", "AVX_512"))
-
-            feature_set = False
-            for feature, flag in reversed(simd_features):
-                if feature in target:
-                    options.append("-DGMX_SIMD:STRING={0}".format(flag))
-                    feature_set = True
-                    break
-
-            # Fall back
-            if not feature_set:
-                options.append("-DGMX_SIMD:STRING=None")
+            options.append(f"-DGMX_SIMD:STRING={self.spec.variants['simd'].value}")
 
         # Use the 'rtdscp' assembly instruction only on
         # appropriate architectures

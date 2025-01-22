@@ -24,10 +24,14 @@ class Flexiblas(CMakePackage):
     depends_on("c", type="build")  # generated
     depends_on("cxx", type="build")  # generated
     depends_on("fortran", type="build")  # generated
+    variant("ilp64", default=False, description="Force 8 byte integers")
 
     # virtual dependency
     provides("blas")
     provides("lapack")
 
     def cmake_args(self):
-        return [self.define("SYSCONFDIR", self.prefix.etc)]
+        args = [self.define("SYSCONFDIR", self.prefix.etc)]
+        args.append(self.define_from_variant("INTEGER8", variant="ilp64"))
+
+        return args

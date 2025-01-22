@@ -91,6 +91,7 @@ class NetlibLapack(CMakePackage):
     variant("external-blas", default=False, description="Build lapack with an external blas")
     variant("lapacke", default=True, description="Activates the build of the LAPACKE C interface")
     variant("xblas", default=False, description="Builds extended precision routines using XBLAS")
+    variant("ilp64", default=False, when="@3.10:", description="Build Index-64 API libraries")
 
     # Fixes for IBM XL and Cray CCE builds:
     #   Avoid optimizations that alter program semantics
@@ -206,6 +207,7 @@ class CMakeBuilder(spack.build_systems.cmake.CMakeBuilder):
             self.define_from_variant("LAPACKE", "lapacke"),
             self.define_from_variant("LAPACKE_WITH_TMG", "lapacke"),
             self.define("CBLAS", self.spec.satisfies("@3.6.0:")),
+            self.define("BUILD_INDEX64", "ilp64"),
         ]
 
         if self.spec.satisfies("%intel"):
